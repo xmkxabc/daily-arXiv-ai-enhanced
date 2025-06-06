@@ -8,11 +8,12 @@ import argparse
 import langchain_core.exceptions
 from langchain_openai import ChatOpenAI
 from langchain.prompts import (
-  ChatPromptTemplate,
-  SystemMessagePromptTemplate,
-  HumanMessagePromptTemplate,
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
 )
 from structure import Structure
+
 if os.path.exists('.env'):
     dotenv.load_dotenv()
 template = open("template.txt", "r").read()
@@ -60,20 +61,22 @@ def main():
                 "language": language,
                 "content": d['summary']
             })
-            d['AI'] = response.model_dump()
-        except langchain_core.exceptions.OutputParserException as e:
-            print(f"{d['id']} has an error: {e}", file=sys.stderr)
+            if response is not None:
+                d['AI'] = response.model_dump()
+            else:
+                raise ValueError("模型返回了None")
+        except (langchain_core.exceptions.OutputParserException, ValueError, Exception) as e:
+            print(f"{d['id']} 出错: {e}", file=sys.stderr)
             d['AI'] = {
-                 "tldr": "Error",
-                 "motivation": "Error",
-                 "method": "Error",
-                 "result": "Error",
-                 "conclusion": "Error"
+                "tldr": "Error",
+                "motivation": "Error",
+                "method": "Error",
+                "result": "Error",
+                "conclusion": "Error"
             }
-        with open(args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl'), "a") as f:
-            f.write(json.dumps(d) + "\n")
-
-        print(f"Finished {idx+1}/{len(data)}", file=sys.stderr)
+        with open(args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl'), "a", encoding="utf-8") as f:
+            f.write(json.dumps(d, ensure_ascii=False) + "\n")
+        print(f"已完成 {idx+1}/{len(data)}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()
