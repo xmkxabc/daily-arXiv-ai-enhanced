@@ -5,7 +5,7 @@ import dotenv
 import argparse
 
 import langchain_core.exceptions
-from langchain_zhipu import ChatZhipuAI   # 改这里
+from langchain_zhipu import ChatZhipuAI
 from langchain.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
@@ -52,7 +52,6 @@ def main():
 
     print('Open:', args.data, file=sys.stderr)
 
-    # 改这里
     llm = ChatZhipuAI(
         model=model_name,
         api_key=os.environ.get("OPENAI_API_KEY"),
@@ -70,17 +69,21 @@ def main():
     fail_count = 0
 
     for idx, d in enumerate(data):
+        response_raw = None  # 记录原始模型返回
         try:
-            response: Structure = chain.invoke({
+            response_raw = chain.invoke({
                 "language": language,
                 "content": d['summary']
             })
-            if response is not None:
-                d['AI'] = response.model_dump()
+            if response_raw is not None:
+                # 兼容 response 可能为 dict 或 Structure
+                result = response_raw.model_dump() if hasattr(response_raw, "model_dump") else response_raw
+                d['AI'] = result
             else:
                 raise ValueError("模型返回了None")
         except (langchain_core.exceptions.OutputParserException, ValueError, Exception) as e:
             print(f"{d['id']} 出错: {e}", file=sys.stderr)
+            print(f"原始返回内容: {response_raw}", file=sys.stderr)  # 打印原始返回
             fail_count += 1
             # 兼容Structure定义
             d['AI'] = {
