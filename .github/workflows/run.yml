@@ -29,6 +29,8 @@ jobs:
         export CATEGORIES="${{ vars.CATEGORIES }}"
         export MODEL_NAME="${{ vars.MODEL_NAME }}"
         bash run.sh
+    - name: Install langchain_zhipu
+      run: pip install langchain_zhipu
     - name: commit
       run: |
         git config --global user.email "${{ vars.EMAIL }}"
