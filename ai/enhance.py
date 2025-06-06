@@ -52,11 +52,13 @@ def main():
 
     print('Open:', args.data, file=sys.stderr)
 
+    # --- 这里是修改的地方 ---
+    # 移除了 with_structured_output 中的 method="function_calling" 参数
     llm = ChatZhipuAI(
         model=model_name,
         api_key=os.environ.get("OPENAI_API_KEY"),
         base_url=os.environ.get("OPENAI_API_BASE")
-    ).with_structured_output(Structure, method="function_calling")
+    ).with_structured_output(Structure)
 
     print('Connect to:', model_name, file=sys.stderr)
     prompt_template = ChatPromptTemplate.from_messages([
