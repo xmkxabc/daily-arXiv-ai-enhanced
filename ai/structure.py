@@ -1,8 +1,12 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 
 class Structure(BaseModel):
-  tldr: str = Field(description="generate a too long; didn't read summary")
-  motivation: str = Field(description="describe the motivation in this paper")
-  method: str = Field(description="method of this paper")
-  result: str = Field(description="result of this paper")
-  conclusion: str = Field(description="conclusion of this paper")
+    """
+    The structured data for a paper.
+    """
+    tldr: Optional[str] = Field(default=None, description="A one-sentence summary of the paper, in {language}.")
+    motivation: Optional[str] = Field(default=None, description="What problem is the paper trying to solve? What is the motivation for this work? Please answer in {language}.")
+    method: Optional[str] = Field(default=None, description="How did the paper solve the problem? What is the proposed method? Please answer in {language}.")
+    result: Optional[str] = Field(default=None, description="What are the main results of the paper? Please answer in {language}.")
+    conclusion: Optional[str] = Field(default=None, description="What are the main conclusions of the paper? What are the implications of this work? Please answer in {language}.")
