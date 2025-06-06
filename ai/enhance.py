@@ -63,6 +63,14 @@ def main():
     model_name = os.environ.get("MODEL_NAME", 'glm-4-flash')
     language = os.environ.get("LANGUAGE", 'Chinese')
 
+    # --- Check for API Key ---
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        print("Error: OPENAI_API_KEY not found.", file=sys.stderr)
+        print("Please set the OPENAI_API_KEY in your .env file or as an environment variable.", file=sys.stderr)
+        sys.exit(1)
+
+
     # --- Load and prepare data ---
     try:
         data = []
@@ -93,7 +101,8 @@ def main():
     # --- Set up LangChain ---
     llm = ChatZhipuAI(
         model=model_name,
-        api_key=os.environ.get("ZHIPUAI_API_KEY") # Ensure you use the correct env var name
+        api_key=api_key, # Use the validated API key
+        base_url=os.environ.get("OPENAI_API_BASE")
     )
     print(f'Connecting to model: {model_name}', file=sys.stderr)
 
