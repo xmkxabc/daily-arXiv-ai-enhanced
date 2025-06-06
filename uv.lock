@@ -1169,3 +1169,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/4c/315ca5c32da7e2dc3455f3b2caee5c8c2246074a61aac6ec3378a97b7136/zstandard-0.23.0-cp313-cp313-win32.whl", hash = "sha256:a9b07268d0c3ca5c170a385a0ab9fb7fdd9f5fd866be004c4ea39e44edce47dd", size = 430862 },
     { url = "https://files.pythonhosted.org/packages/a2/bf/c6aaba098e2d04781e8f4f7c0ba3c7aa73d00e4c436bcc0cf059a66691d1/zstandard-0.23.0-cp313-cp313-win_amd64.whl", hash = "sha256:f3513916e8c645d0610815c257cbfd3242adfd5c4cfa78be514e5a3ebb42a41b", size = 495578 },
 ]
+[[package]]
+name = "langchain_zhipu"  
+version = "4.1.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "loguru" },
+    { name = "tiktoken" },
+    { name = "zhipuai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b6/2a/393b48ed06df77d0a2730f54cb2c4b8b6a378d3882772719273c5d88f6c4/langchain_zhipu-4.1.8.tar.gz", hash = "sha256:757041a3111b02966c1417772cc8bd75a9632867800c7a527c7a10b1062086e1", size = 16223 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/49/a0/0a3e8e19e0750ba5c00e12d4538e7887556a31c5d3153c3014a0f443588f/langchain_zhipu-4.1.8-py3-none-any.whl", hash = "sha256:d8c037905a5a1f6a1b107000e3532c1c3c54aa2b291d9e264585c0738e4a9e52", size = 18881 },
+]
