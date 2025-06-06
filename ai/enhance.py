@@ -11,6 +11,7 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
+from langchain_core.output_parsers.pydantic import PydanticToolsOutputParser
 from structure import Structure
 
 if os.path.exists('.env'):
@@ -53,39 +54,49 @@ def main():
     print('Open:', args.data, file=sys.stderr)
 
     # --- 这里是修改的地方 ---
-    # 移除了 with_structured_output 中的 method="function_calling" 参数
+    # 由于 with_structured_output 和 zhipuai 的兼容性问题，
+    # 我们改为手动构建结构化输出链。
     llm = ChatZhipuAI(
         model=model_name,
         api_key=os.environ.get("OPENAI_API_KEY"),
         base_url=os.environ.get("OPENAI_API_BASE")
-    ).with_structured_output(Structure)
-
+    )
     print('Connect to:', model_name, file=sys.stderr)
+
+    # 1. 将Pydantic模型作为"工具"绑定到LLM
+    llm_with_tools = llm.bind_tools([Structure])
+    # 2. 创建一个能够解析这个工具调用的解析器
+    output_parser = PydanticToolsOutputParser(tools=[Structure])
+
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
         HumanMessagePromptTemplate.from_template(template=template)
     ])
-    chain = prompt_template | llm
+    
+    # 3. 将 prompt | llm | parser 串联起来
+    chain = prompt_template | llm_with_tools | output_parser
 
     enhanced_data = []
     fail_count = 0
 
     for idx, d in enumerate(data):
-        response_raw = None  # 记录原始模型返回
+        response_data_list = None  # 记录原始模型返回
         try:
-            response_raw = chain.invoke({
+            # 解析器会返回一个列表，因为模型理论上可以一次调用多个工具
+            response_data_list = chain.invoke({
                 "language": language,
                 "content": d['summary']
             })
-            if response_raw is not None:
-                # 兼容 response 可能为 dict 或 Structure
+            if response_data_list:
+                # 我们只取第一个工具调用的结果
+                response_raw = response_data_list[0]
                 result = response_raw.model_dump() if hasattr(response_raw, "model_dump") else response_raw
                 d['AI'] = result
             else:
-                raise ValueError("模型返回了None")
+                raise ValueError("模型未按预期返回结构化数据")
         except (langchain_core.exceptions.OutputParserException, ValueError, Exception) as e:
             print(f"{d['id']} 出错: {e}", file=sys.stderr)
-            print(f"原始返回内容: {response_raw}", file=sys.stderr)  # 打印原始返回
+            print(f"原始返回内容: {response_data_list}", file=sys.stderr)  # 打印原始返回
             fail_count += 1
             # 兼容Structure定义
             d['AI'] = {
