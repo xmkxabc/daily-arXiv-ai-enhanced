@@ -11,7 +11,8 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
-from langchain_core.output_parsers.pydantic import PydanticToolsOutputParser
+# Corrected import statement
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from structure import Structure
 
 if os.path.exists('.env'):
@@ -53,9 +54,6 @@ def main():
 
     print('Open:', args.data, file=sys.stderr)
 
-    # --- 这里是修改的地方 ---
-    # 由于 with_structured_output 和 zhipuai 的兼容性问题，
-    # 我们改为手动构建结构化输出链。
     llm = ChatZhipuAI(
         model=model_name,
         api_key=os.environ.get("OPENAI_API_KEY"),
@@ -66,7 +64,8 @@ def main():
     # 1. 将Pydantic模型作为"工具"绑定到LLM
     llm_with_tools = llm.bind_tools([Structure])
     # 2. 创建一个能够解析这个工具调用的解析器
-    output_parser = PydanticToolsOutputParser(tools=[Structure])
+    # Corrected class name
+    output_parser = PydanticToolsParser(tools=[Structure])
 
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
