@@ -43,19 +43,27 @@ def parse_args():
 
 def is_response_valid(result):
     """
-    Checks if the AI response is valid and not just placeholder text.
+    Checks if the AI response is valid and not just placeholder text or questions.
     """
     if not result:
         return False
-    # Check if tldr is present and not a placeholder/error
+        
+    # Check if tldr is present, not a placeholder, and not a question
     tldr = result.get("tldr")
-    if not tldr or "one-sentence summary" in tldr.lower() or tldr == "Error":
+    if not tldr or "one-sentence summary" in tldr.lower() or tldr == "Error" or "?" in tldr:
         return False
-    # A simple check to see if at least one other field has content
+        
+    # Check that at least one other field has a meaningful answer, not a question or None
     other_fields = ["motivation", "method", "result", "conclusion"]
-    if not any(result.get(field) for field in other_fields):
-        return False
-    return True
+    meaningful_answers = 0
+    for field in other_fields:
+        content = result.get(field)
+        # Check if content is not None and doesn't contain a question mark
+        if content and "?" not in content:
+            meaningful_answers += 1
+            
+    # We require at least one other field to have a meaningful answer.
+    return meaningful_answers > 0
 
 def main():
     """Main function to run the enhancement process."""
