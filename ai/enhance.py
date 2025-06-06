@@ -1,7 +1,6 @@
 import os
 import json
 import sys
-
 import dotenv
 import argparse
 
@@ -20,7 +19,6 @@ template = open("template.txt", "r").read()
 system = open("system.txt", "r").read()
 
 def parse_args():
-    """解析命令行参数"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True, help="jsonline data file")
     return parser.parse_args()
@@ -31,17 +29,25 @@ def main():
     language = os.environ.get("LANGUAGE", 'Chinese')
 
     data = []
-    with open(args.data, "r") as f:
+    with open(args.data, "r", encoding="utf-8") as f:
         for line in f:
-            data.append(json.loads(line))
+            try:
+                obj = json.loads(line)
+                # 确保summary存在且非空
+                if obj.get('summary'):
+                    data.append(obj)
+                else:
+                    print(f"跳过无summary数据: {obj.get('id', '未知ID')}", file=sys.stderr)
+            except Exception as e:
+                print(f"数据解析失败: {e}", file=sys.stderr)
 
+    # 去重
     seen_ids = set()
     unique_data = []
     for item in data:
         if item['id'] not in seen_ids:
             seen_ids.add(item['id'])
             unique_data.append(item)
-
     data = unique_data
 
     print('Open:', args.data, file=sys.stderr)
@@ -52,8 +58,10 @@ def main():
         SystemMessagePromptTemplate.from_template(system),
         HumanMessagePromptTemplate.from_template(template=template)
     ])
-
     chain = prompt_template | llm
+
+    enhanced_data = []
+    fail_count = 0
 
     for idx, d in enumerate(data):
         try:
@@ -67,16 +75,24 @@ def main():
                 raise ValueError("模型返回了None")
         except (langchain_core.exceptions.OutputParserException, ValueError, Exception) as e:
             print(f"{d['id']} 出错: {e}", file=sys.stderr)
+            fail_count += 1
+            # 兼容Structure定义
             d['AI'] = {
                 "tldr": "Error",
-                "motivation": "Error",
-                "method": "Error",
-                "result": "Error",
-                "conclusion": "Error"
+                "motivation": d.get("motivation", "Error"),
+                "method": d.get("method", "Error"),
+                "result": d.get("result", "Error"),
+                "conclusion": d.get("conclusion", "Error")
             }
-        with open(args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl'), "a", encoding="utf-8") as f:
-            f.write(json.dumps(d, ensure_ascii=False) + "\n")
+        enhanced_data.append(d)
         print(f"已完成 {idx+1}/{len(data)}", file=sys.stderr)
+
+    out_file = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
+    with open(out_file, "w", encoding="utf-8") as f:
+        for d in enhanced_data:
+            f.write(json.dumps(d, ensure_ascii=False) + "\n")
+
+    print(f"全部完成，失败{fail_count}条，输出文件：{out_file}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()
