@@ -196,5 +196,7 @@ You can modify it in `.github/workflows/run.yml`
 # Star history
 
 [![Star History Chart](https://api.star-history.com/svg?repos=dw-dengwei/daily-arXiv-ai-enhanced&type=Date)](https://www.star-history.com/#dw-dengwei/daily-arXiv-ai-enhanced&Date)
+
 # Status
+
 [![arXiv-daily-ai-enhanced](https://github.com/xmkxabc/daily-arXiv-ai-enhanced/actions/workflows/run.yml/badge.svg)](https://github.com/xmkxabc/daily-arXiv-ai-enhanced/actions/workflows/run.yml)
