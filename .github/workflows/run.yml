@@ -31,10 +31,12 @@ jobs:
         bash run.sh
     - name: commit
       run: |
-        git config --global user.email "${{ vars.EMAIL }}"
+        git config --global user.email "${{ vars.EMAIL发电子邮件 }}"
         git config --global user.name "${{ vars.NAME }}"
         git add .
         git commit -m "update"
+    - name: Pull latest changes
+      run: git pull origin main --rebase
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
