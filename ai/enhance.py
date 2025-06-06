@@ -18,14 +18,18 @@ from structure import Structure
 if os.path.exists('.env'):
     dotenv.load_dotenv()
 
-# Load templates from files
+# --- Corrected File Loading ---
+# Get the absolute path of the directory where the script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Load templates from files using absolute paths
 try:
-    with open("ai/template.txt", "r", encoding="utf-8") as f:
+    with open(os.path.join(script_dir, "template.txt"), "r", encoding="utf-8") as f:
         template = f.read()
-    with open("ai/system.txt", "r", encoding="utf-8") as f:
+    with open(os.path.join(script_dir, "system.txt"), "r", encoding="utf-8") as f:
         system = f.read()
 except FileNotFoundError as e:
-    print(f"Error: Required template file not found: {e}. Make sure you are running from the project root.", file=sys.stderr)
+    print(f"Error: Required template file not found: {e}. Searched in {script_dir}", file=sys.stderr)
     sys.exit(1)
 
 
