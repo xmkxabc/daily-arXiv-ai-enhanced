@@ -1237,7 +1237,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "loguru" },
     { name = "tiktoken" },
-    { name = "zhipuai" },            
+    { name = "zhipuai" }          
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b6/2a/393b48ed06df77d0a2730f54cb2c4b8b6a378d3882772719273c5d88f6c4/langchain_zhipu-4.1.8.tar.gz", hash = "sha256:757041a3111b02966c1417772cc8bd75a9632867800c7a527c7a10b1062086e1", size = 16223 }
 wheels = [
