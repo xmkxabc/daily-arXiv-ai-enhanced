@@ -1170,7 +1170,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/bf/c6aaba098e2d04781e8f4f7c0ba3c7aa73d00e4c436bcc0cf059a66691d1/zstandard-0.23.0-cp313-cp313-win_amd64.whl", hash = "sha256:f3513916e8c645d0610815c257cbfd3242adfd5c4cfa78be514e5a3ebb42a41b", size = 495578 },
 ]
 [[package]]
-name = "langchain_zhipu"  
+name = "langchain_zhipu"
 version = "4.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
