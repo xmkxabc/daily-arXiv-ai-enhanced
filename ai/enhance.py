@@ -143,7 +143,8 @@ def main():
                         print(f"  Success on attempt {attempt + 1}", file=sys.stderr)
                         break # Exit retry loop on success
                     else:
-                        print(f"  Attempt {attempt + 1} failed validation (incomplete data).", file=sys.stderr)
+                        # Log the invalid data for debugging
+                        print(f"  Attempt {attempt + 1} failed validation (incomplete data). Response: {json.dumps(result, ensure_ascii=False)}", file=sys.stderr)
                 else:
                     print(f"  Attempt {attempt + 1} failed (model returned no structured data).", file=sys.stderr)
 
