@@ -5,7 +5,7 @@ import dotenv
 import argparse
 
 import langchain_core.exceptions
-from langchain_openai import ChatOpenAI
+from langchain_zhipu import ChatZhipuAI   # 改这里
 from langchain.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
@@ -25,7 +25,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    model_name = os.environ.get("MODEL_NAME", 'deepseek-chat')
+    model_name = os.environ.get("MODEL_NAME", 'glm-4-flash')
     language = os.environ.get("LANGUAGE", 'Chinese')
 
     data = []
@@ -52,7 +52,13 @@ def main():
 
     print('Open:', args.data, file=sys.stderr)
 
-    llm = ChatOpenAI(model=model_name).with_structured_output(Structure, method="function_calling")
+    # 改这里
+    llm = ChatZhipuAI(
+        model=model_name,
+        api_key=os.environ.get("OPENAI_API_KEY"),
+        base_url=os.environ.get("OPENAI_API_BASE")
+    ).with_structured_output(Structure, method="function_calling")
+
     print('Connect to:', model_name, file=sys.stderr)
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
