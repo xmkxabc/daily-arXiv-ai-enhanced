@@ -1,58 +1,58 @@
 import os
 import re
-from datetime import datetime, date
+from datetime import datetime, date, timedelta # Correctly import timedelta here
 from collections import defaultdict
 import calendar
 
-# --- 配置区 ---
+# --- Configuration ---
 DATA_DIR = "data"
 README_PATH = "README.md"
 TEMPLATE_PATH = "readme_content_template.md"
 
 def get_report_files():
-    """扫描data目录，获取所有报告文件并按日期排序。"""
+    """Scans the data directory, gets all report files, and sorts them by date."""
     files = []
     for filename in os.listdir(DATA_DIR):
-        # 确保只处理符合 YYYY-MM-DD.md 格式的文件
+        # Ensure we only process files with the YYYY-MM-DD.md format
         if re.match(r"\d{4}-\d{2}-\d{2}\.md$", filename):
             files.append(os.path.join(DATA_DIR, filename))
-    # 按文件名（即日期）降序排序，最新的在最前面
+    # Sort files by name (i.e., by date) in descending order, latest first
     files.sort(reverse=True)
     return files
 
 def parse_latest_report_toc(filepath):
-    """解析最新报告文件，提取其目录。"""
+    """Parses the latest report file to extract its Table of Contents."""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
-        # 使用正则表达式查找Table of Contents部分
+        # Use regex to find the Table of Contents section
         toc_match = re.search(r'# Table of Contents\n\n(.*?)\n\n<hr>', content, re.DOTALL)
         if not toc_match:
             return ""
         
         toc_lines = toc_match.group(1).strip().split('\n')
-        # 将Markdown列表转换为更紧凑的格式
+        # Convert the Markdown list to a more compact format
         mini_toc = " | ".join([line.strip().replace("- [", "").split("]")[0] for line in toc_lines])
         return mini_toc
     except Exception:
         return ""
 
 def generate_dashboard_section(latest_file, recent_files):
-    """生成动态摘要仪表盘模块。"""
+    """Generates the Dynamic Digest Dashboard module."""
     if not latest_file:
-        return "## 最新速报\n\n暂无报告。\n"
+        return "## Latest Report\n\nNo reports found.\n"
 
     latest_date_str = os.path.basename(latest_file).replace('.md', '')
-    dashboard_md = f"## **最新速报：{latest_date_str}**\n\n"
+    dashboard_md = f"## **Latest Report: {latest_date_str}**\n\n"
     
     mini_toc = parse_latest_report_toc(latest_file)
     if mini_toc:
-        dashboard_md += f"**今日领域分布:** {mini_toc}\n\n"
+        dashboard_md += f"**Today's Fields:** {mini_toc}\n\n"
     
-    dashboard_md += f"> [**阅读 {latest_date_str} 的完整报告...**](./{latest_file})\n"
+    dashboard_md += f"> [**Read the full report for {latest_date_str}...**](./{latest_file})\n"
     
-    # 增加“本周回顾”
-    dashboard_md += "\n---\n\n### **本周回顾 (Past 7 Days)**\n\n"
+    # Add the "Past 7 Days" section
+    dashboard_md += "\n---\n\n### **Past 7 Days**\n\n"
     for file in recent_files:
         date_str = os.path.basename(file).replace('.md', '')
         dashboard_md += f"- [{date_str}](./{file})\n"
@@ -60,7 +60,7 @@ def generate_dashboard_section(latest_file, recent_files):
     return dashboard_md
 
 def generate_calendar_md(year, month, files_by_date):
-    """为指定月份生成日历热图的Markdown表格。"""
+    """Generates a Calendar Heatmap Markdown table for a given month."""
     cal = calendar.Calendar()
     month_name = date(year, month, 1).strftime('%B')
     
@@ -77,7 +77,7 @@ def generate_calendar_md(year, month, files_by_date):
                 day_str = f"{year}-{month:02d}-{day:02d}"
                 if day_str in files_by_date:
                     link = f"[{day}](./{files_by_date[day_str]})"
-                    # 高亮当天
+                    # Highlight today's date
                     if date(year, month, day) == date.today():
                         link = f"**{link}**"
                     week_md.append(link)
@@ -90,13 +90,13 @@ def generate_calendar_md(year, month, files_by_date):
     return md
 
 def generate_archive_md(files_by_year_month):
-    """生成折叠存档模块。"""
-    md = "### **历史存档 (Full Archive)**\n\n"
+    """Generates the collapsible archive module."""
+    md = "### **Full Archive**\n\n"
     
-    # 按年份降序排序
+    # Sort by year in descending order
     for year in sorted(files_by_year_month.keys(), reverse=True):
         md += f"<details>\n<summary><strong>{year}</strong></summary>\n\n"
-        # 按月份降序排序
+        # Sort by month in descending order
         for month in sorted(files_by_year_month[year].keys(), reverse=True):
             md += f"<details>\n<summary>{date(year, int(month), 1).strftime('%B')}</summary>\n\n"
             for file in sorted(files_by_year_month[year][month], reverse=True):
@@ -107,15 +107,15 @@ def generate_archive_md(files_by_year_month):
     return md
 
 def main():
-    """主函数，生成并更新README.md。"""
+    """Main function to generate and update README.md."""
     report_files = get_report_files()
     if not report_files:
-        print("在data目录中未找到任何报告文件。")
+        print("No report files found in the data directory.")
         return
 
-    # --- 准备数据 ---
+    # --- Prepare Data ---
     latest_report = report_files[0]
-    # 取最近的7个报告（不包括最新的那个）
+    # Get the last 7 reports (excluding the latest one)
     recent_reports = report_files[1:8] 
     
     files_by_date = {os.path.basename(f).replace('.md', ''): f for f in report_files}
@@ -125,37 +125,35 @@ def main():
         year, month, _ = basename.split('-')
         files_by_year_month[int(year)][int(month)].append(f)
 
-    # --- 生成各个模块 ---
+    # --- Generate Sections ---
     dashboard_md = generate_dashboard_section(latest_report, recent_reports)
     
     today = date.today()
     current_month_cal = generate_calendar_md(today.year, today.month, files_by_date)
     
-    # 如果今天是月初，可能还想显示上个月的日历
     last_month_date = today.replace(day=1) - timedelta(days=1)
-    # 修正了对timedelta的调用
-    from datetime import timedelta
 
     last_month_cal = ""
-    if today.day < 7: # 比如，如果还没到7号，就显示上个月的日历
+    # If it's early in the month, show last month's calendar as well
+    if today.day < 7: 
         last_month_cal = generate_calendar_md(last_month_date.year, last_month_date.month, files_by_date)
 
-    # 从存档中排除最近的月份，避免重复
+    # Exclude recent months from the archive to avoid duplication
     archive_files = defaultdict(lambda: defaultdict(list))
     for year, months in files_by_year_month.items():
         for month, files in months.items():
-            # 不在日历中显示的才加入存档
-            if not (year == today.year and month == today.month) and \
-               not (year == last_month_date.year and month == last_month_date.month and today.day < 7):
+            is_in_calendar = (year == today.year and month == today.month) or \
+                             (year == last_month_date.year and month == last_month_date.month and today.day < 7)
+            if not is_in_calendar:
                 archive_files[year][month].extend(files)
 
     archive_md = generate_archive_md(archive_files)
     
-    # --- 组合最终内容 ---
+    # --- Combine Final Content ---
     content_parts = [
         dashboard_md,
         "---",
-        "### 近期日历 (Recent Calendar)",
+        "### Recent Calendar",
         current_month_cal
     ]
     if last_month_cal:
@@ -168,7 +166,7 @@ def main():
     
     final_content = "\n\n".join(content_parts)
 
-    # --- 读取模板并写入README.md ---
+    # --- Read Template and Write to README.md ---
     try:
         with open(TEMPLATE_PATH, 'r', encoding='utf-8') as f:
             readme_template = f.read()
@@ -178,9 +176,9 @@ def main():
         with open(README_PATH, 'w', encoding='utf-8') as f:
             f.write(final_readme)
             
-        print("README.md 已成功更新！")
+        print("README.md has been successfully updated!")
     except FileNotFoundError:
-        print(f"错误：找不到README模板文件 {TEMPLATE_PATH}")
+        print(f"Error: README template not found at {TEMPLATE_PATH}")
 
 if __name__ == "__main__":
     main()
