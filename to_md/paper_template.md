@@ -16,6 +16,8 @@ Result: {result}
 
 Conclusion: {conclusion}
 
-Abstract: {summary}
+Abstract: {ai_summary}
+
+摘要翻译: {translation}
 
 </details>
