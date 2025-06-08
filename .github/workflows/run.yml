@@ -54,7 +54,8 @@ jobs:
         echo "工作流成功完成！"
 
     - name: Create or Update Daily Digest Issue
-      uses: peter-evans/create-or-update-issue-from-file@v5
+      # Corrected the version from v5 to a stable v4
+      uses: peter-evans/create-or-update-issue-from-file@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         # 动态设置Issue标题
