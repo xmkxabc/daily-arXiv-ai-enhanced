@@ -1,102 +1,109 @@
 import json
 import os
-import argparse
 import sys
+import argparse
 from collections import defaultdict
+from itertools import count
 
 def parse_args():
-    """解析命令行参数。"""
-    parser = argparse.ArgumentParser(description="将JSONL文件转换为带目录的Markdown文件。")
-    parser.add_argument("--input", type=str, required=True, help="输入的JSONL文件。")
-    parser.add_argument("--template", type=str, required=True, help="每篇论文的Markdown模板文件。")
-    parser.add_argument("--output", type=str, required=True, help="输出的Markdown文件。")
+    """Parses command-line arguments using a more standard approach."""
+    parser = argparse.ArgumentParser(description="Converts a JSONL file to a Markdown file with a ranked Table of Contents.")
+    parser.add_argument("--input", type=str, required=True, help="The input JSONL file.")
+    parser.add_argument("--template", type=str, required=True, help="The Markdown template file for each paper.")
+    parser.add_argument("--output", type=str, required=True, help="The output Markdown file.")
     return parser.parse_args()
 
-def generate_anchor(name):
-    """从分类名称创建URL友好的锚点。"""
-    return "".join(char for char in name if char.isalnum()).lower()
-
 def main():
-    """主函数，执行转换过程。"""
+    """Main function to build the Markdown report."""
     args = parse_args()
-    
+
+    # --- 1. Load Data and Template ---
     try:
         with open(args.input, 'r', encoding='utf-8') as f:
             data = [json.loads(line) for line in f]
     except FileNotFoundError:
-        print(f"错误: 在 {args.input} 找不到输入文件", file=sys.stderr)
+        print(f"Error: Input file not found at {args.input}", file=sys.stderr)
         return
     except json.JSONDecodeError:
-        print(f"错误: 无法解析 {args.input}。请确保是有效的JSONL格式。", file=sys.stderr)
+        print(f"Error: Could not parse {args.input}. Please ensure it is a valid JSONL file.", file=sys.stderr)
         return
-        
+
     try:
         with open(args.template, 'r', encoding='utf-8') as f:
             template = f.read()
     except FileNotFoundError:
-        print(f"错误: 在 {args.template} 找不到模板文件", file=sys.stderr)
+        print(f"Error: Template file not found at {args.template}", file=sys.stderr)
         return
 
-    # 按分类对论文进行分组
+    # --- 2. Rank and Sort Categories based on user's logic ---
+    preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI')
+    preference = [cat.strip() for cat in preference_str.split(',')]
+
+    def rank(category):
+        """Assigns a rank to a category based on the preference list."""
+        try:
+            return preference.index(category)
+        except ValueError:
+            return len(preference)
+
     papers_by_category = defaultdict(list)
     for paper in data:
-        category = paper.get('cate', 'Uncategorized')
-        papers_by_category[category].append(paper)
+        # The primary category is stored under the 'cate' key by the crawler
+        primary_category = paper.get("cate", "Uncategorized")
+        papers_by_category[primary_category].append(paper)
     
-    # 对分类进行排序以保持一致的顺序
-    sorted_categories = sorted(papers_by_category.keys())
+    sorted_categories = sorted(papers_by_category.keys(), key=rank)
 
-    # --- 生成目录 ---
-    toc_content = "## Table of Contents\n<a name=\"table-of-contents\"></a>\n\n"
-    for category in sorted_categories:
-        count = len(papers_by_category[category])
-        anchor = generate_anchor(category)
-        toc_content += f"- [{category} ({count} papers)](#{anchor})\n"
-    toc_content += "\n<hr>\n\n"
+    # --- 3. Generate Table of Contents using user's format ---
+    markdown = "<div id=toc></div>\n\n# Table of Contents\n\n"
+    for cate in sorted_categories:
+        count = len(papers_by_category[cate])
+        # Replicating the user's specific TOC format
+        markdown += f"- [{cate}](#{cate}) [Total: {count}]\n"
 
-    # --- 生成论文内容 ---
-    paper_content = ""
-    global_idx = 1
-    for category in sorted_categories:
-        anchor = generate_anchor(category)
-        paper_content += f"## {category}\n<a name=\"{anchor}\"></a>\n\n"
+    # --- 4. Generate Paper Content using user's format ---
+    paper_idx_counter = count(1) # Global counter for all papers
+    for cate in sorted_categories:
+        # Replicating the user's specific section header format
+        markdown += f"\n\n<div id='{cate}'></div>\n\n"
+        markdown += f"# {cate} [[Back]](#toc)\n\n"
         
-        for paper in papers_by_category[category]:
-            ai_data = paper.get('AI', {})
-            
-            replacement_data = {
-                "idx": global_idx,
-                "title": paper.get('title', 'N/A'),
-                "url": paper.get('id', '#'),
-                "authors": ', '.join(paper.get('authors', ['N/A'])),
-                "cate": paper.get('cate', 'N/A'),
-                "summary": paper.get('summary', 'N/A').replace('\n', ' '),
-                "translation": ai_data.get('translation', 'N/A'),
-                "tldr": ai_data.get('tldr', 'N/A'),
-                "motivation": ai_data.get('motivation', 'N/A'),
-                "method": ai_data.get('method', 'N/A'),
-                "result": ai_data.get('result', 'N/A'),
-                "conclusion": ai_data.get('conclusion', 'N/A'),
-                "related_work": ai_data.get('related_work', 'N/A'),
-                "potential_applications": ai_data.get('potential_applications', 'N/A'),
-                "future_work": ai_data.get('future_work', 'N/A')
-            }
-
-            paper_output = template
-            for key, value in replacement_data.items():
-                str_value = str(value) if value is not None else 'N/A'
-                paper_output = paper_output.replace(f"{{{key}}}", str_value)
-            
-            paper_content += paper_output + '\n'
-            global_idx += 1
-            
-    # 合并目录和内容
-    final_output = toc_content + paper_content
+        category_papers = papers_by_category[cate]
         
-    with open(args.output, 'w', encoding='utf-8') as f:
-        f.write(final_output)
+        paper_markdown_parts = []
+        for item in category_papers:
+            # Use a dictionary for AI data for safe access
+            ai_data = item.get('AI', {})
+            
+            # Use .format() as requested, but populate data safely using .get()
+            # This prevents KeyError if a field is missing in the JSON data
+            formatted_paper = template.format(
+                idx=next(paper_idx_counter),
+                title=item.get("title", "N/A"),
+                authors=", ".join(item.get("authors", ["N/A"])),
+                summary=item.get("summary", "N/A").replace('\n', ' '),
+                # The crawler provides the absolute URL in the 'id' field
+                url=item.get('id', '#'), 
+                cate=item.get('cate', 'N/A'),
+                tldr=ai_data.get('tldr', 'N/A'),
+                motivation=ai_data.get('motivation', 'N/A'),
+                method=ai_data.get('method', 'N/A'),
+                result=ai_data.get('result', 'N/A'),
+                conclusion=ai_data.get('conclusion', 'N/A'),
+                # Add other AI fields here if they are re-introduced later
+                ai_summary=ai_data.get('summary', 'N/A'),
+                translation=ai_data.get('translation', 'N/A')
+            )
+            paper_markdown_parts.append(formatted_paper)
+            
+        markdown += "\n\n".join(paper_markdown_parts)
 
-    print(f"成功将 {len(data)} 篇论文转换为带目录的Markdown，并保存到 {args.output}")
+    # --- 5. Write to Output File ---
+    # Use the explicit --output argument for clarity and robustness
+    with open(args.output, "w", encoding='utf-8') as f:
+        f.write(markdown)
+    
+    print(f"Successfully converted {len(data)} papers to Markdown and saved to {args.output}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
