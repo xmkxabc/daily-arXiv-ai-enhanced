@@ -35,7 +35,7 @@ def main():
         print(f"Error: Template file not found at {args.template}", file=sys.stderr)
         return
 
-    # --- 2. 排序和分组 ---
+    # --- 2. 依据偏好对分类进行排序和分组 ---
     preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI')
     preference = [cat.strip() for cat in preference_str.split(',')]
 
@@ -48,6 +48,7 @@ def main():
 
     papers_by_category = defaultdict(list)
     for paper in data:
+        # 修正：从'categories'列表中正确获取主分类
         categories_list = paper.get("categories", [])
         primary_category = categories_list[0] if categories_list else "Uncategorized"
         papers_by_category[primary_category].append(paper)
@@ -59,6 +60,7 @@ def main():
     markdown = f"## Total Papers Today: {total_papers}\n\n"
     markdown += "<div id=toc></div>\n\n# Table of Contents\n\n"
     for cate in sorted_categories:
+        # 修正：避免变量名冲突
         paper_count = len(papers_by_category[cate])
         markdown += f"- [{cate}](#{cate}) [Total: {paper_count}]\n"
 
@@ -74,17 +76,16 @@ def main():
         for item in category_papers:
             ai_data = item.get('AI', {})
             paper_id = item.get('id', '')
+            # 修正：为URL补全前缀
             full_url = f"https://arxiv.org/abs/{paper_id}" if paper_id else "#"
 
-            # **修正**: 使用.replace()方法逐个替换占位符，更安全、更清晰
+            # 修正：使用更安全的.replace()方法填充模板
             paper_output = template
             
-            # 准备所有需要替换的数据
             replacement_data = {
                 "idx": next(paper_idx_counter),
                 "title": item.get("title", "N/A"),
                 "authors": ", ".join(item.get("authors", ["N/A"])),
-                "abstract": item.get("summary", "N/A").replace('\n', ' '), # 这是原文摘要
                 "url": full_url, 
                 "cate": item.get("categories", ["N/A"])[0],
                 "tldr": ai_data.get('tldr', 'N/A'),
@@ -92,12 +93,14 @@ def main():
                 "method": ai_data.get('method', 'N/A'),
                 "result": ai_data.get('result', 'N/A'),
                 "conclusion": ai_data.get('conclusion', 'N/A'),
-                "ai_summary": ai_data.get('summary', 'N/A'), # 这是AI生成的摘要
-                "translation": ai_data.get('translation', 'N/A') # 这是翻译
+                # 修正：确保ai_summary和translation被正确填充
+                "ai_summary": ai_data.get('summary', 'N/A'), 
+                "translation": ai_data.get('translation', 'N/A')
             }
 
             for key, value in replacement_data.items():
                 str_value = str(value) if value is not None else 'N/A'
+                # 这里使用{key}作为占位符，例如 {title}, {authors}
                 paper_output = paper_output.replace(f"{{{key}}}", str_value)
 
             paper_markdown_parts.append(paper_output)
