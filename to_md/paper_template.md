@@ -1,13 +1,8 @@
-### [{idx}] [{title}]({url})
-*{authors}*
-
-Main category: {cate}
+### [{idx}] {title}
+Authors: {authors} | Main Category: {cate} | Paper Link
 
 TL;DR: {tldr}
 
-
-<details>
-  <summary>Details</summary>
 Motivation: {motivation}
 
 Method: {method}
@@ -16,6 +11,10 @@ Result: {result}
 
 Conclusion: {conclusion}
 
+Related Work: {related_work}
+
+Potential Applications: {potential_applications}
+
 Abstract: {summary}
 
-</details>
+Translation: {translation}
