@@ -59,8 +59,8 @@ def main():
     """主函数，运行增强过程。"""
     args = parse_args()
     
-    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-2.5-flash-preview-0520')
-    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-0417,gemini-2.0-flash-001,gemini-2.0-flash-lite")
+    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-2.5-flash-preview-05-20')
+    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-04-17,gemini-2.0-flash-001,gemini-2.0-flash-lite")
     
     model_list = [primary_model_name]
     if fallback_models_str:
