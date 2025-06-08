@@ -59,10 +59,8 @@ def main():
     """主函数，运行增强过程。"""
     args = parse_args()
     
-    # --- 模型配置 ---
-    # 更新了默认的主模型和备用模型列表
-    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-2.5-flash-preview-05-20')
-    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-04-17,gemini-2.0-flash-001,gemini-2.0-flash-lite")
+    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-preview-0520')
+    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-flash-preview-0417,gemini-1.0-flash-001,gemini-1.0-flash-lite")
     
     model_list = [primary_model_name]
     if fallback_models_str:
@@ -95,7 +93,6 @@ def main():
     data = unique_data
     print(f"从 {args.data} 加载了 {len(data)} 篇不重复的论文", file=sys.stderr)
 
-    # --- 为所有可用模型创建LangChain链 ---
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
         HumanMessagePromptTemplate.from_template(template)
@@ -113,23 +110,20 @@ def main():
             print(f"警告：无法初始化模型 {model_name}。错误：{e}", file=sys.stderr)
 
     
-    # --- 主处理循环 ---
     enhanced_data = []
     total_failures = 0
-    current_model_index = 0 # 从主模型开始
+    current_model_index = 0
 
     for idx, d in enumerate(data):
         print(f"正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
         final_result = None
         
-        # **核心逻辑：使用当前选定的模型进行处理**
         current_model_name = model_list[current_model_index]
         print(f"  使用当前模型: {current_model_name}")
         
         chain = model_chains.get(current_model_name)
         if not chain:
             print(f"  错误：当前模型 {current_model_name} 未成功初始化，跳过。", file=sys.stderr)
-            final_result = None
         else:
             for attempt in range(args.retries):
                 try:
@@ -139,22 +133,19 @@ def main():
                         if is_response_valid(result):
                             final_result = result
                             print(f"  > 第 {attempt + 1} 次尝试成功", file=sys.stderr)
-                            break # 成功，跳出重试循环
+                            break
                         else:
                             print(f"  > 第 {attempt + 1} 次尝试验证失败 (存在空字段)。", file=sys.stderr)
                     else:
                         print(f"  > 第 {attempt + 1} 次尝试失败 (模型未返回结构化数据)。", file=sys.stderr)
-                
                 except google_exceptions.ResourceExhausted as e:
                     print(f"  ! 模型 {current_model_name} 调用次数已耗尽。错误: {e}", file=sys.stderr)
-                    # 如果还有备用模型，则切换到下一个模型
                     if current_model_index < len(model_list) - 1:
                         current_model_index += 1
                         print(f"  ! 永久切换到下一个模型: {model_list[current_model_index]}", file=sys.stderr)
                     else:
                         print("  ! 所有模型均已耗尽。", file=sys.stderr)
-                    break # 无论如何，都停止对当前论文的尝试
-                
+                    break 
                 except Exception as e:
                     print(f"  > 第 {attempt + 1} 次尝试出错: {e}", file=sys.stderr)
                 
@@ -166,15 +157,12 @@ def main():
             print(f"  处理 {d['id']} 失败。", file=sys.stderr)
             d['AI'] = {
                 "tldr": "错误：AI分析失败。", "motivation": None, "method": None,
-                "result": None, "conclusion": None, "translation": None,
-                "related_work": None, "potential_applications": None, "future_work": None
+                "result": None, "conclusion": None, "translation": None, "summary": None
             }
         else:
             d['AI'] = final_result
             
         enhanced_data.append(d)
-        
-        # 遵守最严格模型的RPM限制 (10 RPM -> 6秒/次)
         time.sleep(6)
 
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')

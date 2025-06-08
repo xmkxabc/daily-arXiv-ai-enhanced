@@ -35,7 +35,7 @@ def main():
         print(f"Error: Template file not found at {args.template}", file=sys.stderr)
         return
 
-    # --- 2. 依据偏好对分类进行排序和分组 ---
+    # --- 2. 排序和分组 ---
     preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI')
     preference = [cat.strip() for cat in preference_str.split(',')]
 
@@ -48,7 +48,6 @@ def main():
 
     papers_by_category = defaultdict(list)
     for paper in data:
-        # 从'categories'列表中正确获取主分类
         categories_list = paper.get("categories", [])
         primary_category = categories_list[0] if categories_list else "Uncategorized"
         papers_by_category[primary_category].append(paper)
@@ -73,34 +72,30 @@ def main():
         
         paper_markdown_parts = []
         for item in category_papers:
-            # 安全地获取AI分析结果，如果不存在则返回空字典
             ai_data = item.get('AI', {})
             paper_id = item.get('id', '')
             full_url = f"https://arxiv.org/abs/{paper_id}" if paper_id else "#"
 
-            # **核心优化**：检查AI处理是否失败
-            is_ai_failed = ai_data.get('tldr', '').startswith('Error:')
-            error_msg = "AI analysis failed"
-
-            # 使用.replace()方法填充模板，比.format()更安全
-            paper_output = template
-            
-            # 准备一个清晰的数据字典用于替换，明确区分数据来源
+            # 准备一个清晰的数据字典用于替换
             replacement_data = {
                 "idx": next(paper_idx_counter),
                 "title": item.get("title", "N/A"),
                 "authors": ", ".join(item.get("authors", ["N/A"])),
                 "url": full_url, 
                 "cate": item.get("categories", ["N/A"])[0],
-                "tldr": error_msg if is_ai_failed else ai_data.get('tldr', 'N/A'),
-                "motivation": error_msg if is_ai_failed else ai_data.get('motivation', 'N/A'),
-                "method": error_msg if is_ai_failed else ai_data.get('method', 'N/A'),
-                "result": error_msg if is_ai_failed else ai_data.get('result', 'N/A'),
-                "conclusion": error_msg if is_ai_failed else ai_data.get('conclusion', 'N/A'),
-                "ai_summary": error_msg if is_ai_failed else ai_data.get('summary', 'N/A'), 
-                "translation": error_msg if is_ai_failed else ai_data.get('translation', 'N/A')
+                # 'summary' 来自原始数据 'item'
+                "summary": item.get("summary", "N/A").replace('\n', ' '),
+                "tldr": ai_data.get('tldr', 'N/A'),
+                "motivation": ai_data.get('motivation', 'N/A'),
+                "method": ai_data.get('method', 'N/A'),
+                "result": ai_data.get('result', 'N/A'),
+                "conclusion": ai_data.get('conclusion', 'N/A'),
+                # 'ai_summary' 来自AI分析结果 'ai_data'
+                "ai_summary": ai_data.get('summary', 'N/A'), 
+                "translation": ai_data.get('translation', 'N/A')
             }
 
+            paper_output = template
             for key, value in replacement_data.items():
                 str_value = str(value) if value is not None else 'N/A'
                 paper_output = paper_output.replace(f"{{{key}}}", str_value)
