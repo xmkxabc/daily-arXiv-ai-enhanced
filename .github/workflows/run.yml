@@ -5,47 +5,79 @@ name: arXiv-daily-ai-enhanced
 
 on:
   schedule:
+    # 每天定时运行 (UTC时间 16:30)
     - cron: "30 16 * * *"
-  workflow_dispatch:
-
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
     - name: Install dependencies
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        # This line ensures uv is available in the shell's path for subsequent steps
-        # source /root/.cargo/env         
+        # 取消注释，确保uv命令在后续步骤中可用
+        # source /root/.cargo/env
         uv sync
-    - name: Run script
+
+    - name: Run workflow steps
+      # 使用 'env' 关键字来安全地设置环境变量
+      env:
+        GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+        LANGUAGE: ${{ vars.LANGUAGE }}
+        CATEGORIES: ${{ vars.CATEGORIES }}
+        MODEL_NAME: ${{ vars.MODEL_NAME }}
       run: |
+        # 激活虚拟环境
         source .venv/bin/activate
-        # Export keys for both Google and OpenAI services for flexibility
-        export GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
-        export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-        export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-        export LANGUAGE="${{ vars.LANGUAGE }}"
-        export CATEGORIES="${{ vars.CATEGORIES }}"
-        export MODEL_NAME="${{ vars.MODEL_NAME }}"
-        bash run.sh
-    - name: commit
+
+        # --- 1. 动态定义文件名 ---
+        # 这种方式比硬编码文件名更健壮
+        TODAY=$(date +"%Y-%m-%d")
+        RAW_JSONL_FILE="data/$TODAY.jsonl"
+        ENHANCED_JSONL_FILE="data/${TODAY}_AI_enhanced_${LANGUAGE:-Chinese}.jsonl"
+        OUTPUT_MD_FILE="data/$TODAY.md"
+        PAPER_TEMPLATE_FILE="to_md/paper_template.md"
+
+        # --- 2. 运行Scrapy爬虫 ---
+        echo "步骤 1: 正在抓取 arXiv 论文..."
+        (cd daily_arxiv && scrapy crawl arxiv -o "../$RAW_JSONL_FILE")
+
+        # --- 3. 运行AI增强脚本 ---
+        echo "步骤 2: 正在使用 AI 增强数据..."
+        python ai/enhance.py --data "$RAW_JSONL_FILE"
+
+        # --- 4. 运行Markdown转换脚本 ---
+        echo "步骤 3: 正在生成 Markdown 报告..."
+        python to_md/convert.py --input "$ENHANCED_JSONL_FILE" --template "$PAPER_TEMPLATE_FILE" --output "$OUTPUT_MD_FILE"
+
+        # --- 5. 更新主README ---
+        echo "步骤 4: 正在更新主 README.md..."
+        python update_readme.py
+
+        echo "工作流成功完成！"
+
+    - name: Commit and push changes
       run: |
         git config --global user.email "${{ vars.EMAIL }}"
         git config --global user.name "${{ vars.NAME }}"
         git add .
-        # Add a check to only commit if there are changes
+        # 检查是否有文件变动，避免空提交
         if ! git diff --staged --quiet; then
           git commit -m "update"
         else
           echo "No changes to commit."
         fi
+
     - name: Pull latest changes
       run: git pull origin main --rebase
+
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
