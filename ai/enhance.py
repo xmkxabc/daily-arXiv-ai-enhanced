@@ -59,8 +59,8 @@ def main():
     """主函数，运行增强过程。"""
     args = parse_args()
     
-    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-preview-0520')
-    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-flash-preview-0417,gemini-1.0-flash-001,gemini-1.0-flash-lite")
+    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-2.5-flash-preview-0520')
+    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-0417,gemini-2.0-flash-001,gemini-2.0-flash-lite")
     
     model_list = [primary_model_name]
     if fallback_models_str:
@@ -127,7 +127,12 @@ def main():
         else:
             for attempt in range(args.retries):
                 try:
-                    response_data_list = chain.invoke({"language": language, "content": d['summary']})
+                    # **核心改动**: 将标题也传递给AI
+                    response_data_list = chain.invoke({
+                        "title": d['title'],
+                        "content": d['summary'],
+                        "language": language
+                    })
                     if response_data_list:
                         result = response_data_list[0].model_dump()
                         if is_response_valid(result):
@@ -156,8 +161,9 @@ def main():
             total_failures += 1
             print(f"  处理 {d['id']} 失败。", file=sys.stderr)
             d['AI'] = {
-                "tldr": "错误：AI分析失败。", "motivation": None, "method": None,
-                "result": None, "conclusion": None, "translation": None, "summary": None
+                "title_translation": "错误：AI分析失败。", "tldr": None, "motivation": None, "method": None,
+                "result": None, "conclusion": None, "translation": None, "summary": None,
+                "comments": None, "keywords": None
             }
         else:
             d['AI'] = final_result
