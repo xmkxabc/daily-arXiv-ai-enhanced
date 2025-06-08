@@ -48,7 +48,10 @@ def main():
 
     papers_by_category = defaultdict(list)
     for paper in data:
-        primary_category = paper.get("cate", "Uncategorized")
+        # **FIX 1: Correctly get the primary category from the 'categories' list.**
+        # Safely access the list and get the first item, default to "Uncategorized".
+        categories_list = paper.get("categories", [])
+        primary_category = categories_list[0] if categories_list else "Uncategorized"
         papers_by_category[primary_category].append(paper)
     
     sorted_categories = sorted(papers_by_category.keys(), key=rank)
@@ -56,12 +59,10 @@ def main():
     # --- 3. Generate Table of Contents ---
     markdown = "<div id=toc></div>\n\n# Table of Contents\n\n"
     for cate in sorted_categories:
-        # Renamed 'count' to 'paper_count' to avoid conflict with itertools.count
         paper_count = len(papers_by_category[cate])
         markdown += f"- [{cate}](#{cate}) [Total: {paper_count}]\n"
 
     # --- 4. Generate Paper Content ---
-    # Now, 'count' correctly refers to the itertools function
     paper_idx_counter = count(1) 
     for cate in sorted_categories:
         markdown += f"\n\n<div id='{cate}'></div>\n\n"
@@ -73,14 +74,19 @@ def main():
         for item in category_papers:
             ai_data = item.get('AI', {})
             
+            # **FIX 2: Correctly construct the full paper URL.**
+            paper_id = item.get('id', '')
+            # The 'id' from the spider is just the number, so we prepend the base URL.
+            full_url = f"https://arxiv.org/abs/{paper_id}" if paper_id else "#"
+
             # Safely format the template
             formatted_paper = template.format(
                 idx=next(paper_idx_counter),
                 title=item.get("title", "N/A"),
                 authors=", ".join(item.get("authors", ["N/A"])),
                 summary=item.get("summary", "N/A").replace('\n', ' '),
-                url=item.get('id', '#'), 
-                cate=item.get('cate', 'N/A'),
+                url=full_url, 
+                cate=item.get("categories", ["N/A"])[0], # Use the correct key for category
                 tldr=ai_data.get('tldr', 'N/A'),
                 motivation=ai_data.get('motivation', 'N/A'),
                 method=ai_data.get('method', 'N/A'),
