@@ -6,7 +6,7 @@ from collections import defaultdict
 from itertools import count
 
 def parse_args():
-    """Parses command-line arguments using a more standard approach."""
+    """Parses command-line arguments."""
     parser = argparse.ArgumentParser(description="Converts a JSONL file to a Markdown file with a ranked Table of Contents.")
     parser.add_argument("--input", type=str, required=True, help="The input JSONL file.")
     parser.add_argument("--template", type=str, required=True, help="The Markdown template file for each paper.")
@@ -35,7 +35,7 @@ def main():
         print(f"Error: Template file not found at {args.template}", file=sys.stderr)
         return
 
-    # --- 2. Rank and Sort Categories based on user's logic ---
+    # --- 2. Rank and Sort Categories ---
     preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI')
     preference = [cat.strip() for cat in preference_str.split(',')]
 
@@ -48,23 +48,22 @@ def main():
 
     papers_by_category = defaultdict(list)
     for paper in data:
-        # The primary category is stored under the 'cate' key by the crawler
         primary_category = paper.get("cate", "Uncategorized")
         papers_by_category[primary_category].append(paper)
     
     sorted_categories = sorted(papers_by_category.keys(), key=rank)
 
-    # --- 3. Generate Table of Contents using user's format ---
+    # --- 3. Generate Table of Contents ---
     markdown = "<div id=toc></div>\n\n# Table of Contents\n\n"
     for cate in sorted_categories:
-        count = len(papers_by_category[cate])
-        # Replicating the user's specific TOC format
-        markdown += f"- [{cate}](#{cate}) [Total: {count}]\n"
+        # Renamed 'count' to 'paper_count' to avoid conflict with itertools.count
+        paper_count = len(papers_by_category[cate])
+        markdown += f"- [{cate}](#{cate}) [Total: {paper_count}]\n"
 
-    # --- 4. Generate Paper Content using user's format ---
-    paper_idx_counter = count(1) # Global counter for all papers
+    # --- 4. Generate Paper Content ---
+    # Now, 'count' correctly refers to the itertools function
+    paper_idx_counter = count(1) 
     for cate in sorted_categories:
-        # Replicating the user's specific section header format
         markdown += f"\n\n<div id='{cate}'></div>\n\n"
         markdown += f"# {cate} [[Back]](#toc)\n\n"
         
@@ -72,17 +71,14 @@ def main():
         
         paper_markdown_parts = []
         for item in category_papers:
-            # Use a dictionary for AI data for safe access
             ai_data = item.get('AI', {})
             
-            # Use .format() as requested, but populate data safely using .get()
-            # This prevents KeyError if a field is missing in the JSON data
+            # Safely format the template
             formatted_paper = template.format(
                 idx=next(paper_idx_counter),
                 title=item.get("title", "N/A"),
                 authors=", ".join(item.get("authors", ["N/A"])),
                 summary=item.get("summary", "N/A").replace('\n', ' '),
-                # The crawler provides the absolute URL in the 'id' field
                 url=item.get('id', '#'), 
                 cate=item.get('cate', 'N/A'),
                 tldr=ai_data.get('tldr', 'N/A'),
@@ -90,7 +86,6 @@ def main():
                 method=ai_data.get('method', 'N/A'),
                 result=ai_data.get('result', 'N/A'),
                 conclusion=ai_data.get('conclusion', 'N/A'),
-                # Add other AI fields here if they are re-introduced later
                 ai_summary=ai_data.get('summary', 'N/A'),
                 translation=ai_data.get('translation', 'N/A')
             )
@@ -99,7 +94,6 @@ def main():
         markdown += "\n\n".join(paper_markdown_parts)
 
     # --- 5. Write to Output File ---
-    # Use the explicit --output argument for clarity and robustness
     with open(args.output, "w", encoding='utf-8') as f:
         f.write(markdown)
     
