@@ -1,4 +1,4 @@
-### [{idx}] {title}
+[{idx}] {title}
 Authors: {authors} | Main Category: {cate} | Paper Link
 
 TL;DR: {tldr}
@@ -14,6 +14,8 @@ Conclusion: {conclusion}
 Related Work: {related_work}
 
 Potential Applications: {potential_applications}
+
+Future Work: {future_work}
 
 Abstract: {summary}
 
