@@ -1,13 +1,9 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
 name: arXiv-daily-ai-enhanced
 
 on:
   schedule:
-    # 每天定时运行 (UTC时间 16:30)
     - cron: "30 16 * * *"
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,12 +16,11 @@ jobs:
     - name: Install dependencies
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        # 取消注释，确保uv命令在后续步骤中可用
-        # source /root/.cargo/env
+        source /root/.cargo/env
         uv sync
 
     - name: Run workflow steps
-      # 使用 'env' 关键字来安全地设置环境变量
+      id: run_scripts # 给这个步骤一个ID，方便后续引用它的输出
       env:
         GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -34,41 +29,49 @@ jobs:
         CATEGORIES: ${{ vars.CATEGORIES }}
         MODEL_NAME: ${{ vars.MODEL_NAME }}
       run: |
-        # 激活虚拟环境
         source .venv/bin/activate
-
-        # --- 1. 动态定义文件名 ---
-        # 这种方式比硬编码文件名更健壮
+        
+        # 动态定义文件名
         TODAY=$(date +"%Y-%m-%d")
         RAW_JSONL_FILE="data/$TODAY.jsonl"
         ENHANCED_JSONL_FILE="data/${TODAY}_AI_enhanced_${LANGUAGE:-Chinese}.jsonl"
         OUTPUT_MD_FILE="data/$TODAY.md"
         PAPER_TEMPLATE_FILE="to_md/paper_template.md"
 
-        # --- 2. 运行Scrapy爬虫 ---
+        # 运行所有脚本
         echo "步骤 1: 正在抓取 arXiv 论文..."
         (cd daily_arxiv && scrapy crawl arxiv -o "../$RAW_JSONL_FILE")
-
-        # --- 3. 运行AI增强脚本 ---
         echo "步骤 2: 正在使用 AI 增强数据..."
         python ai/enhance.py --data "$RAW_JSONL_FILE"
-
-        # --- 4. 运行Markdown转换脚本 ---
         echo "步骤 3: 正在生成 Markdown 报告..."
         python to_md/convert.py --input "$ENHANCED_JSONL_FILE" --template "$PAPER_TEMPLATE_FILE" --output "$OUTPUT_MD_FILE"
-
-        # --- 5. 更新主README ---
         echo "步骤 4: 正在更新主 README.md..."
         python update_readme.py
 
+        # 将当日报告的文件路径设置为一个输出变量，供后续步骤使用
+        echo "report_path=$OUTPUT_MD_FILE" >> $GITHUB_OUTPUT
+
         echo "工作流成功完成！"
+
+    - name: Create or Update Daily Digest Issue
+      uses: peter-evans/create-or-update-issue-from-file@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        # 动态设置Issue标题
+        title: "每日速报 (Daily Digest): ${{ env.TODAY_DATE }}"
+        # 使用上一步生成的报告文件作为Issue内容
+        content-filepath: "${{ steps.run_scripts.outputs.report_path }}"
+        # 为Issue打上标签，便于管理
+        labels: daily-digest, automated
+      env:
+          # 获取当天的日期
+        TODAY_DATE: $(date +"%Y-%m-%d")
 
     - name: Commit and push changes
       run: |
         git config --global user.email "${{ vars.EMAIL }}"
         git config --global user.name "${{ vars.NAME }}"
         git add .
-        # 检查是否有文件变动，避免空提交
         if ! git diff --staged --quiet; then
           git commit -m "update"
         else
