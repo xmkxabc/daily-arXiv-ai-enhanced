@@ -48,7 +48,7 @@ def main():
 
     papers_by_category = defaultdict(list)
     for paper in data:
-        # 修正：从'categories'列表中正确获取主分类
+        # 从'categories'列表中正确获取主分类
         categories_list = paper.get("categories", [])
         primary_category = categories_list[0] if categories_list else "Uncategorized"
         papers_by_category[primary_category].append(paper)
@@ -60,7 +60,6 @@ def main():
     markdown = f"## Total Papers Today: {total_papers}\n\n"
     markdown += "<div id=toc></div>\n\n# Table of Contents\n\n"
     for cate in sorted_categories:
-        # 修正：避免变量名冲突
         paper_count = len(papers_by_category[cate])
         markdown += f"- [{cate}](#{cate}) [Total: {paper_count}]\n"
 
@@ -74,14 +73,16 @@ def main():
         
         paper_markdown_parts = []
         for item in category_papers:
+            # 安全地获取AI分析结果，如果不存在则返回空字典
             ai_data = item.get('AI', {})
             paper_id = item.get('id', '')
-            # 修正：为URL补全前缀
             full_url = f"https://arxiv.org/abs/{paper_id}" if paper_id else "#"
 
-            # 修正：使用更安全的.replace()方法填充模板
+            # 使用.replace()方法填充模板，比.format()更安全
             paper_output = template
             
+            # **核心修正**：
+            # 准备一个清晰的数据字典用于替换，明确区分数据来源
             replacement_data = {
                 "idx": next(paper_idx_counter),
                 "title": item.get("title", "N/A"),
@@ -93,14 +94,14 @@ def main():
                 "method": ai_data.get('method', 'N/A'),
                 "result": ai_data.get('result', 'N/A'),
                 "conclusion": ai_data.get('conclusion', 'N/A'),
-                # 修正：确保ai_summary和translation被正确填充
+                # **此行是关键**：确保从ai_data字典中获取名为'summary'的键
+                # 这个键是由ai/enhance.py脚本根据ai/structure.py的定义生成的
                 "ai_summary": ai_data.get('summary', 'N/A'), 
                 "translation": ai_data.get('translation', 'N/A')
             }
 
             for key, value in replacement_data.items():
                 str_value = str(value) if value is not None else 'N/A'
-                # 这里使用{key}作为占位符，例如 {title}, {authors}
                 paper_output = paper_output.replace(f"{{{key}}}", str_value)
 
             paper_markdown_parts.append(paper_output)
