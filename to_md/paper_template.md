@@ -3,28 +3,21 @@
 
 Main category: {cate}
 
-## TL;DR: 
-{tldr}
+> **TL;DR:** {tldr}
 
 <details>
   <summary>Details</summary>
 
-## Motivation: 
-{motivation}
+**Motivation:** {motivation}
 
-## Method: 
-{method}
+**Method:** {method}
 
-## Result: 
-{result}
+**Result:** {result}
 
-## Conclusion:
-{conclusion}
+**Conclusion:** {conclusion}
 
-## ai_Abstract: 
-{ai_summary}
+> **ai_Abstract:** {ai_summary}
 
-## 摘要翻译: 
-{translation}
+> **摘要翻译:** {translation}
 
 </details>
