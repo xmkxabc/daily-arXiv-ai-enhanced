@@ -78,10 +78,13 @@ def main():
             paper_id = item.get('id', '')
             full_url = f"https://arxiv.org/abs/{paper_id}" if paper_id else "#"
 
+            # **核心优化**：检查AI处理是否失败
+            is_ai_failed = ai_data.get('tldr', '').startswith('Error:')
+            error_msg = "AI analysis failed"
+
             # 使用.replace()方法填充模板，比.format()更安全
             paper_output = template
             
-            # **核心修正**：
             # 准备一个清晰的数据字典用于替换，明确区分数据来源
             replacement_data = {
                 "idx": next(paper_idx_counter),
@@ -89,15 +92,13 @@ def main():
                 "authors": ", ".join(item.get("authors", ["N/A"])),
                 "url": full_url, 
                 "cate": item.get("categories", ["N/A"])[0],
-                "tldr": ai_data.get('tldr', 'N/A'),
-                "motivation": ai_data.get('motivation', 'N/A'),
-                "method": ai_data.get('method', 'N/A'),
-                "result": ai_data.get('result', 'N/A'),
-                "conclusion": ai_data.get('conclusion', 'N/A'),
-                # **此行是关键**：确保从ai_data字典中获取名为'summary'的键
-                # 这个键是由ai/enhance.py脚本根据ai/structure.py的定义生成的
-                "ai_summary": ai_data.get('summary', 'N/A'), 
-                "translation": ai_data.get('translation', 'N/A')
+                "tldr": error_msg if is_ai_failed else ai_data.get('tldr', 'N/A'),
+                "motivation": error_msg if is_ai_failed else ai_data.get('motivation', 'N/A'),
+                "method": error_msg if is_ai_failed else ai_data.get('method', 'N/A'),
+                "result": error_msg if is_ai_failed else ai_data.get('result', 'N/A'),
+                "conclusion": error_msg if is_ai_failed else ai_data.get('conclusion', 'N/A'),
+                "ai_summary": error_msg if is_ai_failed else ai_data.get('summary', 'N/A'), 
+                "translation": error_msg if is_ai_failed else ai_data.get('translation', 'N/A')
             }
 
             for key, value in replacement_data.items():
