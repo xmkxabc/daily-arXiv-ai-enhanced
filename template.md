@@ -13,7 +13,7 @@ Otherwise, you can directly use this repo. Please star it if you like :)
 4. Create two repository secrets named `OPENAI_API_KEY` and `OPENAI_BASE_URL`, and input corresponding values.
 5. Go to Variables. Variables are shown as plain text and are used for non-sensitive data
 6. Create the following repository variables:
-   1. `CATEGORIES`: separate the categories with ",", such as "cs.CL, cs.CV"
+   1. `CATEGORIES`: separate the categories with ",", such as "cs.CR, cs.AI, cs.LG, cs.MA, cs.RO, cs.CV, cs,HC, cs.ET, cs.CV, cs.SE, cs.SI, cs.NI, cs.IT, cs.AR, cs.DC, cs.CY, cs.CE"
    2. `LANGUAGE`: such as "Chinese" or "English"
    3. `MODEL_NAME`: such as "deepseek-chat"
    4. `EMAIL`: your email for push to github
