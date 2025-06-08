@@ -37,6 +37,9 @@ jobs:
           # 动态定义文件名
           TODAY=$(date +"%Y-%m-%d")
           RAW_JSONL_FILE="data/$TODAY.jsonl"
+          ENHANCED_JSONL_FILE="data/${TODAY}_AI_enhanced_${LANGUAGE:-Chinese}.jsonl"
+          OUTPUT_MD_FILE="data/$TODAY.md"
+          PAPER_TEMPLATE_FILE="to_md/paper_template.md"
           
           # 步骤 1: 运行Scrapy爬虫
           echo "Step 1: Fetching new papers from arXiv..."
@@ -49,6 +52,54 @@ jobs:
           # 步骤 3: 运行数据库构建脚本 (新)
           echo "Step 3: Building the JSON database for the website..."
           python build_database.py
+
+          # 步骤 4: 生成Markdown报告
+          echo "Step 4: Generating Markdown report..."
+          python to_md/convert.py --input "$ENHANCED_JSONL_FILE" --template "$PAPER_TEMPLATE_FILE" --output "$OUTPUT_MD_FILE"
+          
+          # 步骤 5: 更新主 README.md
+          echo "Step 5: Updating main README.md..."
+          python update_readme.py
+          
+          echo "report_path=$OUTPUT_MD_FILE" >> $GITHUB_OUTPUT
+
+          echo "工作流成功完成！"
+       
+      #注释   
+      - name: Set Current Date
+        id: date
+        run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      
+      #注释 
+      - name: Create or Update Daily Digest Issue
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # **修正**: 从上一步的环境变量中获取日期
+          title: "每日速报 (Daily Digest): ${{ env.TODAY_DATE }}"
+          content-filepath: "${{ steps.run_scripts.outputs.report_path }}"
+          labels: daily-digest, automated
+      
+      #注释
+      - name: Commit and push changes
+        run: |
+          git config --global user.email "${{ vars.EMAIL }}"
+          git config --global user.name "${{ vars.NAME }}"
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "update"
+          else
+            echo "No changes to commit."
+          fi      
+      #注释
+      - name: Pull latest changes
+        run: git pull origin main --rebase
+
+      #注释
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}    
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
