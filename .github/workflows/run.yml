@@ -20,7 +20,7 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         # This line ensures uv is available in the shell's path for subsequent steps
-        source /root/.cargo/env
+        # source /root/.cargo/env         
         uv sync
     - name: Run script
       run: |
