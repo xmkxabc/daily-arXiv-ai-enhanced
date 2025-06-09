@@ -74,7 +74,7 @@ def main():
         
     paper_template = load_template(paper_template_file)
 
-    # --- Your category preference and sorting logic ---
+    # --- Category preference and sorting logic ---
     preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI,stat.ML,eess.IV')
     preference = [cat.strip() for cat in preference_str.split(',')]
     def rank(category):
@@ -92,15 +92,19 @@ def main():
 
     # --- Build Table of Contents and Paper Content ---
     total_papers = len(data)
-    toc_parts = [f"## Total Papers Today: {total_papers}\n", "<div id='toc'></div>\n", "### Table of Contents\n"]
+    toc_parts = [f"## Total Papers Today: {total_papers}\n", "<div id='toc'></div>\n", "### Table of Contents"]
     for cate in sorted_categories:
         toc_parts.append(f"- [{cate}](#{cate}) [Total: {len(papers_by_category[cate])}]")
     
-    paper_content_parts = []
+    # This list will hold the formatted content for each category block
+    category_content_blocks = []
     paper_idx_counter = count(1)
     for cate in sorted_categories:
-        paper_content_parts.append(f"\n<div id='{cate}'></div>\n\n### {cate} [[Back]](#toc)\n")
+        # Start the category block with its header
+        category_header = f"## <div id='{cate}'></div> {cate} [[Back]](#toc)"
         
+        # Create a list to hold each paper's markdown within this category
+        papers_in_category_list = []
         for item in papers_by_category[cate]:
             ai_data = item.get('AI', {})
             
@@ -120,10 +124,19 @@ def main():
             temp_paper_content = paper_template
             for key, value in replacement_data.items():
                 temp_paper_content = temp_paper_content.replace(f"{{{key}}}", str(value or ''))
-            paper_content_parts.append(temp_paper_content)
+            papers_in_category_list.append(temp_paper_content)
+
+        # Join the papers within this category with a proper separator
+        # and add the complete block to the main list.
+        full_category_block = category_header + "\n\n" + "\n\n---\n\n".join(papers_in_category_list)
+        category_content_blocks.append(full_category_block)
 
     # --- Assemble Final Markdown ---
-    final_paper_content = "\n".join(toc_parts) + "\n" + "\n".join(paper_content_parts)
+    final_toc = "\n".join(toc_parts)
+    # Join all category blocks with proper separation
+    all_papers_content = "\n\n".join(category_content_blocks)
+    
+    final_paper_content = f"{final_toc}\n\n{all_papers_content}"
     
     final_content = main_template.replace('{date}', today_str)
     final_content = final_content.replace('{content}', final_paper_content)
