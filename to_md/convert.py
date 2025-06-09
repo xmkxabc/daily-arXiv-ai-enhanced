@@ -4,14 +4,14 @@ import sys
 from collections import defaultdict
 from itertools import count
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo # Use the standard library for timezones (Python 3.9+)
 
 
 def get_today_date():
     """
     Gets the current date in the Asia/Shanghai timezone.
     """
-    tz = pytz.timezone('Asia/Shanghai')
+    tz = ZoneInfo('Asia/Shanghai')
     return datetime.now(tz).strftime('%Y-%m-%d')
 
 def load_json_data(file_path):
