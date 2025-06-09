@@ -9,10 +9,13 @@ from itertools import count
 def parse_arguments():
     """
     Parses command-line arguments.
-    Accepts --data, as called by the user's run.sh script.
+    Accepts --input, --template, and --output to match the run.yml workflow.
     """
     parser = argparse.ArgumentParser(description="将JSONL文件转换为带目录的Markdown文件。")
-    parser.add_argument("--data", type=str, required=True, help="输入的 JSONL 文件路径")
+    # --- 关键修正: 匹配 run.yml 中传递的参数 ---
+    parser.add_argument("--input", type=str, required=True, help="输入的 JSONL 文件路径")
+    parser.add_argument("--template", type=str, required=True, help="单篇论文的模板文件路径")
+    parser.add_argument("--output", type=str, required=True, help="输出的 Markdown 文件路径")
     return parser.parse_args()
 
 def load_jsonl_data(file_path):
@@ -52,19 +55,22 @@ def main():
     """
     args = parse_arguments()
     
-    input_file = args.data
+    # --- 核心修正: 直接使用从命令行传入的参数 ---
+    input_file = args.input
+    paper_template_file = args.template
+    output_file = args.output
+    # 主模板文件路径固定，因为脚本从根目录运行
+    main_template_file = 'template.md'
     
-    # 从输入文件名中提取日期
-    match = re.search(r'(\d{4}-\d{2}-\d{2})', input_file)
+    # 从输出文件名中提取日期
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', output_file)
     if not match:
-        print(f"错误: 无法从输入文件名 '{input_file}' 中提取日期。文件名格式应为 YYYY-MM-DD*.jsonl", file=sys.stderr)
-        sys.exit(1)
+        # 如果从输出文件找不到，尝试从输入文件找
+        match = re.search(r'(\d{4}-\d{2}-\d{2})', input_file)
+        if not match:
+            print(f"错误: 无法从输入或输出文件名中提取日期: '{input_file}', '{output_file}'", file=sys.stderr)
+            sys.exit(1)
     date_str = match.group(1)
-
-    # --- 关键修正: 根据在根目录执行的事实，修正所有文件路径 ---
-    paper_template_file = 'to_md/paper_template.md' # 纸张模板在 to_md/ 子目录中
-    main_template_file = 'template.md'              # 主模板在根目录中
-    output_file = f'data/{date_str}.md'             # 输出文件在 data/ 子目录中
 
     main_template = load_template(main_template_file)
     data = load_jsonl_data(input_file)
