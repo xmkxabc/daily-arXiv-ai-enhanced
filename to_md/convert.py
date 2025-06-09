@@ -8,20 +8,16 @@ from itertools import count
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-def get_today_date():
-    """
-    Gets the current date in the Asia/Shanghai timezone. Used when no input file is provided.
-    """
-    tz = ZoneInfo('Asia/Shanghai')
-    return datetime.now(tz).strftime('%Y-%m-%d')
-
 def parse_arguments():
     """
-    Parses command-line arguments. --data is now optional.
+    Parses command-line arguments.
+    Accepts --input, --template, and --output as required arguments.
     """
     parser = argparse.ArgumentParser(description="将JSONL文件转换为带目录的Markdown文件。")
-    # --data 参数现在是可选的
-    parser.add_argument("--data", type=str, required=False, help="输入的 JSONL 文件路径, e.g., ../data/YYYY-MM-DD_AI_enhanced_Chinese.jsonl")
+    # --- 关键修正: 匹配 run.sh 传递的参数 ---
+    parser.add_argument("--input", type=str, required=True, help="输入的 JSONL 文件路径")
+    parser.add_argument("--template", type=str, required=True, help="单篇论文的模板文件路径 (paper_template.md)")
+    parser.add_argument("--output", type=str, required=True, help="输出的 Markdown 文件路径")
     return parser.parse_args()
 
 def load_jsonl_data(file_path):
@@ -35,7 +31,6 @@ def load_jsonl_data(file_path):
     
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            # 过滤掉空行
             data = [json.loads(line) for line in f if line.strip()]
             if not data:
                 print(f"信息: JSONL文件为空 {file_path}.", file=sys.stdout)
@@ -62,42 +57,20 @@ def main():
     """
     args = parse_arguments()
     
-    # --- 核心修正 ---
-    # 如果没有 --data 参数，说明是“无新论文”的情况
-    if not args.data:
-        date_str = get_today_date()
-        main_template_file = '../template.md'
-        output_file = f'../data/{date_str}.md'
-        
-        # 即使模板文件不存在也继续，以防万一
-        try:
-            main_template = load_template(main_template_file)
-            final_content = main_template.replace('{date}', date_str)
-            final_content = final_content.replace('{content}', "### 今日没有找到新论文。")
-        except SystemExit: # load_template sys.exit(1) on failure
-             # Fallback if main template is missing
-            final_content = f"# {date_str}\n\n### 今日没有找到新论文。"
-
-        with open(output_file, "w", encoding='utf-8') as f:
-            f.write(final_content)
-        print(f"成功生成报告 (无新论文): {output_file}")
-        sys.exit(0)
-
-    # --- 如果有 --data 参数，则正常执行 ---
-    input_file = args.data
+    # --- 核心修正: 直接使用传入的参数作为文件路径 ---
+    input_file = args.input
+    paper_template_file = args.template
+    output_file = args.output
+    # 假设主模板文件在项目的根目录
+    main_template_file = 'template.md'
     
-    # 从输入文件名中提取日期
-    match = re.search(r'(\d{4}-\d{2}-\d{2})', input_file)
+    # 从输出文件名中提取日期
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', output_file)
     if not match:
-        print(f"错误: 无法从输入文件名 '{input_file}' 中提取日期。文件名格式应为 YYYY-MM-DD*.jsonl", file=sys.stderr)
+        print(f"错误: 无法从输出文件名 '{output_file}' 中提取日期。文件名格式应为 YYYY-MM-DD.md", file=sys.stderr)
         sys.exit(1)
     date_str = match.group(1)
 
-    # 修正模板和输出文件的路径
-    paper_template_file = 'paper_template.md'
-    main_template_file = '../template.md'
-    output_file = f'../data/{date_str}.md'
-    
     main_template = load_template(main_template_file)
     data = load_jsonl_data(input_file)
 
@@ -142,7 +115,6 @@ def main():
         for item in papers_by_category[cate]:
             ai_data = item.get('AI', {})
             
-            # 恢复了原始 comment，并为 AI comment 提供了独立的字段
             replacement_data = {
                 "idx": next(paper_idx_counter),
                 "title": item.get("title", "N/A"),
