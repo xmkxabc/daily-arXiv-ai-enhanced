@@ -9,6 +9,8 @@
 
 > **TL;DR:** {tldr}
 
+**AI_Comments:** {ai_comment}
+
 <details>
   <summary>Details</summary>
 
@@ -19,8 +21,6 @@
 **Result:** {result}
 
 **Conclusion:** {conclusion}
-
-**AI_Comments:** {comments}
 
 > **ai_Abstract:** {ai_summary}
 

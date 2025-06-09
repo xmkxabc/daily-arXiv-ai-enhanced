@@ -5,14 +5,23 @@ import argparse
 import re
 from collections import defaultdict
 from itertools import count
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+def get_today_date():
+    """
+    Gets the current date in the Asia/Shanghai timezone. Used when no input file is provided.
+    """
+    tz = ZoneInfo('Asia/Shanghai')
+    return datetime.now(tz).strftime('%Y-%m-%d')
 
 def parse_arguments():
     """
-    Parses command-line arguments.
+    Parses command-line arguments. --data is now optional.
     """
     parser = argparse.ArgumentParser(description="将JSONL文件转换为带目录的Markdown文件。")
-    # --data 参数是必须的，脚本将从这里获取输入文件路径
-    parser.add_argument("--data", type=str, required=True, help="输入的 JSONL 文件路径, e.g., ../data/YYYY-MM-DD_AI_enhanced_Chinese.jsonl")
+    # --data 参数现在是可选的
+    parser.add_argument("--data", type=str, required=False, help="输入的 JSONL 文件路径, e.g., ../data/YYYY-MM-DD_AI_enhanced_Chinese.jsonl")
     return parser.parse_args()
 
 def load_jsonl_data(file_path):
@@ -54,19 +63,37 @@ def main():
     args = parse_arguments()
     
     # --- 核心修正 ---
-    # 1. 从参数获取输入文件
+    # 如果没有 --data 参数，说明是“无新论文”的情况
+    if not args.data:
+        date_str = get_today_date()
+        main_template_file = '../template.md'
+        output_file = f'../data/{date_str}.md'
+        
+        # 即使模板文件不存在也继续，以防万一
+        try:
+            main_template = load_template(main_template_file)
+            final_content = main_template.replace('{date}', date_str)
+            final_content = final_content.replace('{content}', "### 今日没有找到新论文。")
+        except SystemExit: # load_template sys.exit(1) on failure
+             # Fallback if main template is missing
+            final_content = f"# {date_str}\n\n### 今日没有找到新论文。"
+
+        with open(output_file, "w", encoding='utf-8') as f:
+            f.write(final_content)
+        print(f"成功生成报告 (无新论文): {output_file}")
+        sys.exit(0)
+
+    # --- 如果有 --data 参数，则正常执行 ---
     input_file = args.data
     
-    # 2. 从输入文件名中提取日期
-    # 使用正则表达式从文件名（如 ../data/2025-06-09_AI_enhanced_Chinese.jsonl）中匹配日期
+    # 从输入文件名中提取日期
     match = re.search(r'(\d{4}-\d{2}-\d{2})', input_file)
     if not match:
         print(f"错误: 无法从输入文件名 '{input_file}' 中提取日期。文件名格式应为 YYYY-MM-DD*.jsonl", file=sys.stderr)
         sys.exit(1)
     date_str = match.group(1)
 
-    # 3. 修正模板和输出文件的路径
-    # 因为脚本在 to_md/ 中运行，所以 paper_template 在当前目录，而主模板和输出目录在上一级
+    # 修正模板和输出文件的路径
     paper_template_file = 'paper_template.md'
     main_template_file = '../template.md'
     output_file = f'../data/{date_str}.md'
@@ -115,7 +142,6 @@ def main():
         for item in papers_by_category[cate]:
             ai_data = item.get('AI', {})
             
-            # --- 关键修正 ---
             # 恢复了原始 comment，并为 AI comment 提供了独立的字段
             replacement_data = {
                 "idx": next(paper_idx_counter),
