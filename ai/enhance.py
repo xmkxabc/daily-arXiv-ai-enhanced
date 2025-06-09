@@ -40,9 +40,9 @@ def is_response_valid(result):
 
 def main():
     args = parse_args()
-    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-2.5-flash-preview-0520')
-    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-0417,gemini-2.0-flash-001,gemini-2.0-flash-lite")
-    model_list = [primary_model_name] + [name.strip() for name in fallback_models_str.split(',')] if fallback_models_str else [primary_model_name]
+    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-preview-0520')
+    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-flash-preview-0417,gemini-1.0-flash-001")
+    model_list = [primary_model_name] + [name.strip() for name in fallback_models_str.split(',') if name.strip()] if fallback_models_str else [primary_model_name]
     language = os.environ.get("LANGUAGE", 'Chinese') 
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
