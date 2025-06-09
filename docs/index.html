@@ -12,7 +12,6 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* 自定义<details>标签的箭头样式 */
         .details-arrow::-webkit-details-marker {
             display: none;
         }
@@ -38,6 +37,21 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
+            flex-shrink: 0; /* 防止标签在flex容器中被压缩 */
+        }
+        /* 为滚动条增加一点样式，使其在支持的浏览器中不那么突兀 */
+        .horizontal-scrollbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #a0aec0; /* gray-400 */
+            border-radius: 20px;
+        }
+        .dark .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #4a5568; /* gray-600 */
         }
     </style>
 </head>
@@ -75,7 +89,8 @@
                     </svg>
                 </div>
             </div>
-            <div id="category-filters" class="mt-4 flex flex-wrap gap-2 items-center justify-center">
+            <!-- **核心CSS修正**：增加了flex-nowrap和overflow-x-auto来实现水平滚动 -->
+            <div id="category-filters" class="mt-4 flex flex-nowrap gap-3 items-center overflow-x-auto pb-3 horizontal-scrollbar">
                 <!-- 分类过滤器将动态插入此处 -->
             </div>
         </div>
@@ -264,7 +279,7 @@
             }
             
             function renderCategoryFilters() {
-                categoryFiltersContainer.innerHTML = '<span class="font-semibold mr-2">按分类筛选:</span>';
+                categoryFiltersContainer.innerHTML = '<span class="font-semibold mr-4">按分类筛选:</span>';
                 const sorted = [...allCategories].sort();
                 sorted.forEach(cat => {
                     const tag = document.createElement('button');

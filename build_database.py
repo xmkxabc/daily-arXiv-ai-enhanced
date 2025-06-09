@@ -5,7 +5,6 @@ from datetime import datetime
 
 # --- 配置区 ---
 DATA_DIR = "data" 
-# GitHub Pages的标准输出目录
 OUTPUT_DIR = "docs" 
 DATABASE_FILENAME = os.path.join(OUTPUT_DIR, "database.json")
 
@@ -13,10 +12,8 @@ def get_enhanced_files(directory):
     """扫描data目录，找到所有AI增强后的jsonl文件。"""
     all_files = []
     for filename in os.listdir(directory):
-        # 使用正则表达式确保我们只匹配正确格式的文件
         if re.match(r"\d{4}-\d{2}-\d{2}_AI_enhanced_.*\.jsonl$", filename):
             all_files.append(os.path.join(directory, filename))
-    # 按文件名（即日期）降序排序，最新的在最前面
     all_files.sort(reverse=True)
     return all_files
 
@@ -37,24 +34,29 @@ def main():
                 for line in f:
                     try:
                         paper_data = json.loads(line)
-                        # 为每篇论文增加一个日期字段，方便前端排序
-                        # 我们从文件名中提取日期
                         date_str = os.path.basename(filepath).split('_')[0]
                         paper_data['date'] = date_str
+                        
+                        # **核心URL修正逻辑**
+                        # 优先使用爬虫提供的'url'字段，因为它可能包含版本号(v1, v2等)
+                        # 如果'url'字段不存在或为空，则尝试用'id'字段来构建
+                        if 'url' not in paper_data or not paper_data['url']:
+                            paper_id = paper_data.get('id', '')
+                            if paper_id:
+                                paper_data['url'] = f"https://arxiv.org/abs/{paper_id}"
+                            else:
+                                paper_data['url'] = '#' # 最终回退
+                        
                         all_papers.append(paper_data)
                     except json.JSONDecodeError:
                         print(f"警告：跳过文件 {filepath} 中的一个无效JSON行。")
         except Exception as e:
             print(f"错误：处理文件 {filepath} 时出错: {e}")
 
-    # 按日期对所有论文进行最终排序（最新的在前）
-    # 这确保了网站在加载时，默认展示的就是最新的内容
     all_papers.sort(key=lambda x: x.get('date', '0000-00-00'), reverse=True)
 
-    # 确保输出目录存在
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # 将所有论文数据写入最终的数据库文件
     try:
         with open(DATABASE_FILENAME, 'w', encoding='utf-8') as f:
             json.dump(all_papers, f, ensure_ascii=False, indent=2)
