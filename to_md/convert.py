@@ -1,39 +1,40 @@
 import json
 import os
 import sys
+import argparse
+import re
 from collections import defaultdict
 from itertools import count
-from datetime import datetime
-from zoneinfo import ZoneInfo # Use the standard library for timezones (Python 3.9+)
 
+def parse_arguments():
+    """
+    Parses command-line arguments.
+    """
+    parser = argparse.ArgumentParser(description="将JSONL文件转换为带目录的Markdown文件。")
+    # --data 参数是必须的，脚本将从这里获取输入文件路径
+    parser.add_argument("--data", type=str, required=True, help="输入的 JSONL 文件路径, e.g., ../data/YYYY-MM-DD_AI_enhanced_Chinese.jsonl")
+    return parser.parse_args()
 
-def get_today_date():
+def load_jsonl_data(file_path):
     """
-    Gets the current date in the Asia/Shanghai timezone.
-    """
-    tz = ZoneInfo('Asia/Shanghai')
-    return datetime.now(tz).strftime('%Y-%m-%d')
-
-def load_json_data(file_path):
-    """
-    Loads data from a JSON file with proper error handling.
+    Loads data from a JSONL file (one JSON object per line).
     Returns None if the file is not found or is empty/invalid.
     """
     if not os.path.exists(file_path):
-        print(f"信息: 文件未找到 {file_path}. 可能当天没有论文。", file=sys.stdout)
+        print(f"错误: 输入文件未找到 {file_path}", file=sys.stderr)
         return None
     
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            if not data: # Check if the list is empty
-                print(f"信息: JSON文件为空 {file_path}. 可能当天没有论文。", file=sys.stdout)
+            # 过滤掉空行
+            data = [json.loads(line) for line in f if line.strip()]
+            if not data:
+                print(f"信息: JSONL文件为空 {file_path}.", file=sys.stdout)
                 return None
             return data
-    except json.JSONDecodeError:
-        print(f"错误: 解析JSON文件失败 {file_path}", file=sys.stderr)
+    except json.JSONDecodeError as e:
+        print(f"错误: 解析JSONL文件失败 {file_path}: {e}", file=sys.stderr)
         return None
-
 
 def load_template(file_path):
     """
@@ -46,37 +47,44 @@ def load_template(file_path):
         print(f"错误: 模板文件未找到 {file_path}", file=sys.stderr)
         sys.exit(1)
 
-
 def main():
     """
-    Main function to generate the markdown file from JSON data,
-    with category grouping and a table of contents.
+    Main function to generate the markdown file from JSONL data.
     """
-    today_str = get_today_date()
+    args = parse_arguments()
     
-    # --- FIX ---
-    # Corrected the path to look for papers.json in the project root,
-    # where the other scripts create it.
-    input_file = 'papers.json' 
-    paper_template_file = 'to_md/paper_template.md'
-    main_template_file = 'template.md'
-    output_file = f'data/{today_str}.md'
+    # --- 核心修正 ---
+    # 1. 从参数获取输入文件
+    input_file = args.data
+    
+    # 2. 从输入文件名中提取日期
+    # 使用正则表达式从文件名（如 ../data/2025-06-09_AI_enhanced_Chinese.jsonl）中匹配日期
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', input_file)
+    if not match:
+        print(f"错误: 无法从输入文件名 '{input_file}' 中提取日期。文件名格式应为 YYYY-MM-DD*.jsonl", file=sys.stderr)
+        sys.exit(1)
+    date_str = match.group(1)
+
+    # 3. 修正模板和输出文件的路径
+    # 因为脚本在 to_md/ 中运行，所以 paper_template 在当前目录，而主模板和输出目录在上一级
+    paper_template_file = 'paper_template.md'
+    main_template_file = '../template.md'
+    output_file = f'../data/{date_str}.md'
     
     main_template = load_template(main_template_file)
-    data = load_json_data(input_file)
+    data = load_jsonl_data(input_file)
 
-    # If no data, create a simple report and exit
     if data is None:
-        final_content = main_template.replace('{date}', today_str)
-        final_content = final_content.replace('{content}', f"### 今日没有找到新论文。\n\n> 文件 '{input_file}' 未找到或为空。")
+        final_content = main_template.replace('{date}', date_str)
+        final_content = final_content.replace('{content}', f"### 今日没有找到新论文。\n\n> 输入文件 '{input_file}' 未找到或为空。")
         with open(output_file, "w", encoding='utf-8') as f:
             f.write(final_content)
-        print(f"成功生成报告 (无新论文): {output_file}")
+        print(f"成功生成报告 (无新论文或输入文件丢失): {output_file}")
         sys.exit(0)
         
     paper_template = load_template(paper_template_file)
 
-    # --- Category preference and sorting logic ---
+    # --- 分类和排序逻辑 (保持不变) ---
     preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI,stat.ML,eess.IV')
     preference = [cat.strip() for cat in preference_str.split(',')]
     def rank(category):
@@ -87,40 +95,39 @@ def main():
 
     papers_by_category = defaultdict(list)
     for paper in data:
-        primary_category = paper.get("category", "Uncategorized")
+        primary_category = (paper.get("categories") or [paper.get("cate")])[0] or "Uncategorized"
         papers_by_category[primary_category].append(paper)
     
     sorted_categories = sorted(papers_by_category.keys(), key=rank)
 
-    # --- Build Table of Contents and Paper Content ---
+    # --- Markdown 内容生成 (保持不变) ---
     total_papers = len(data)
     toc_parts = [f"## Total Papers Today: {total_papers}\n", "<div id='toc'></div>\n", "### Table of Contents"]
     for cate in sorted_categories:
         toc_parts.append(f"- [{cate}](#{cate}) [Total: {len(papers_by_category[cate])}]")
     
-    # This list will hold the formatted content for each category block
     category_content_blocks = []
     paper_idx_counter = count(1)
     for cate in sorted_categories:
-        # Start the category block with its header
         category_header = f"## <div id='{cate}'></div> {cate} [[Back]](#toc)"
         
-        # Create a list to hold each paper's markdown within this category
         papers_in_category_list = []
         for item in papers_by_category[cate]:
             ai_data = item.get('AI', {})
             
+            # --- 关键修正 ---
+            # 恢复了原始 comment，并为 AI comment 提供了独立的字段
             replacement_data = {
                 "idx": next(paper_idx_counter),
                 "title": item.get("title", "N/A"),
                 "url": item.get('url', '#'),
                 "authors": item.get("authors", "N/A"),
                 "abstract": item.get("abstract", "N/A"),
-                # AI generated fields
+                "comment": item.get("comment", ""), # 这是来自 arXiv 的原始备注
                 "title_translation": ai_data.get('title_translation', ''),
                 "keywords": ai_data.get('keywords', ''),
                 "abstract_translation": ai_data.get('abstract_translation', ''),
-                "comment": ai_data.get('comment', '')
+                "ai_comment": ai_data.get('comment', '') # 这是 AI 生成的备注
             }
             
             temp_paper_content = paper_template
@@ -128,26 +135,21 @@ def main():
                 temp_paper_content = temp_paper_content.replace(f"{{{key}}}", str(value or ''))
             papers_in_category_list.append(temp_paper_content)
 
-        # Join the papers within this category with a proper separator
-        # and add the complete block to the main list.
         full_category_block = category_header + "\n\n" + "\n\n---\n\n".join(papers_in_category_list)
         category_content_blocks.append(full_category_block)
 
-    # --- Assemble Final Markdown ---
     final_toc = "\n".join(toc_parts)
-    # Join all category blocks with proper separation
     all_papers_content = "\n\n".join(category_content_blocks)
     
     final_paper_content = f"{final_toc}\n\n{all_papers_content}"
     
-    final_content = main_template.replace('{date}', today_str)
+    final_content = main_template.replace('{date}', date_str)
     final_content = final_content.replace('{content}', final_paper_content)
 
     with open(output_file, "w", encoding='utf-8') as f:
         f.write(final_content)
     
     print(f"成功将 {total_papers} 篇论文转换为Markdown，并保存到 {output_file}")
-
 
 if __name__ == "__main__":
     main()
