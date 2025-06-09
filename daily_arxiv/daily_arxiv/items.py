@@ -1,10 +1,13 @@
-# Define here the models for your scraped items
-#
-# See documentation in:
-# https://docs.scrapy.org/en/latest/topics/items.html
-
 import scrapy
 
-
-class DailyArxivItem(scrapy.Item):
+class ArxivItem(scrapy.Item):
     id = scrapy.Field()
+    title = scrapy.Field()
+    authors = scrapy.Field()
+    summary = scrapy.Field()
+    url = scrapy.Field()
+    categories = scrapy.Field()
+    cate = scrapy.Field()
+    # **新增**: 存储从arXiv API获取的作者备注
+    comment = scrapy.Field()
+    AI = scrapy.Field()

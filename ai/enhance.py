@@ -8,11 +8,7 @@ import time
 import langchain_core.exceptions
 from langchain_google_genai import ChatGoogleGenerativeAI
 from google.api_core import exceptions as google_exceptions
-from langchain.prompts import (
-    ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-)
+from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from structure import Structure
 
@@ -30,9 +26,7 @@ except FileNotFoundError as e:
     print(f"错误：找不到必需的模板文件: {e}。搜索路径: {script_dir}", file=sys.stderr)
     sys.exit(1)
 
-
 def parse_args():
-    """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="使用AI摘要增强arXiv数据。")
     parser.add_argument("--data", type=str, required=True, help="要处理的JSONL数据文件。")
     parser.add_argument("--retries", type=int, default=3, help="对每篇论文的最大重试次数。")
@@ -40,32 +34,18 @@ def parse_args():
     return parser.parse_args()
 
 def is_response_valid(result):
-    """
-    终极验证：检查所有字段都必须存在且为非空字符串。
-    """
-    if not result:
-        return False
-    
+    if not result: return False
     all_fields = Structure.model_fields.keys()
-
     for field in all_fields:
-        value = result.get(field)
-        if value is None or not str(value).strip():
+        if result.get(field) is None or not str(result.get(field)).strip():
             return False
-            
     return True
 
 def main():
-    """主函数，运行增强过程。"""
     args = parse_args()
-    
-    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-2.5-flash-preview-05-20')
-    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-04-17,gemini-2.0-flash-001,gemini-2.0-flash-lite")
-    
-    model_list = [primary_model_name]
-    if fallback_models_str:
-        model_list.extend([name.strip() for name in fallback_models_str.split(',')])
-
+    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-preview-0520')
+    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-flash-preview-0417,gemini-1.0-flash-001,gemini-1.0-flash-lite")
+    model_list = [primary_model_name] + [name.strip() for name in fallback_models_str.split(',')] if fallback_models_str else [primary_model_name]
     language = os.environ.get("LANGUAGE", 'Chinese') 
 
     api_key = os.environ.get("GOOGLE_API_KEY")
@@ -76,29 +56,17 @@ def main():
     try:
         with open(args.data, "r", encoding="utf-8") as f:
             data = [json.loads(line) for line in f if line.strip()]
-    except FileNotFoundError:
-        print(f"错误: 在 {args.data} 找不到数据文件", file=sys.stderr)
-        return
-    except json.JSONDecodeError as e:
-        print(f"错误: JSON解码失败 {args.data} - {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"错误: 处理文件 {args.data} 时出错: {e}", file=sys.stderr)
         return
 
-    # 数据去重
     seen_ids = set()
-    unique_data = []
-    for item in data:
-        if item.get('id') not in seen_ids:
-            seen_ids.add(item['id'])
-            unique_data.append(item)
+    unique_data = [d for d in data if d.get('id') not in seen_ids and not seen_ids.add(d['id'])]
+    print(f"从 {args.data} 加载了 {len(unique_data)} 篇不重复的论文", file=sys.stderr)
     data = unique_data
-    print(f"从 {args.data} 加载了 {len(data)} 篇不重复的论文", file=sys.stderr)
 
-    prompt_template = ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(system),
-        HumanMessagePromptTemplate.from_template(template)
-    ])
+    prompt_template = ChatPromptTemplate.from_messages([SystemMessagePromptTemplate.from_template(system), HumanMessagePromptTemplate.from_template(template)])
     output_parser = PydanticToolsParser(tools=[Structure])
-
     model_chains = {}
     for model_name in model_list:
         try:
@@ -109,7 +77,6 @@ def main():
         except Exception as e:
             print(f"警告：无法初始化模型 {model_name}。错误：{e}", file=sys.stderr)
 
-    
     enhanced_data = []
     total_failures = 0
     current_model_index = 0
@@ -120,19 +87,14 @@ def main():
         
         current_model_name = model_list[current_model_index]
         print(f"  使用当前模型: {current_model_name}")
-        
         chain = model_chains.get(current_model_name)
+        
         if not chain:
             print(f"  错误：当前模型 {current_model_name} 未成功初始化，跳过。", file=sys.stderr)
         else:
             for attempt in range(args.retries):
                 try:
-                    # **核心改动**: 将标题也传递给AI
-                    response_data_list = chain.invoke({
-                        "title": d['title'],
-                        "content": d['summary'],
-                        "language": language
-                    })
+                    response_data_list = chain.invoke({"language": language, "content": d['summary']})
                     if response_data_list:
                         result = response_data_list[0].model_dump()
                         if is_response_valid(result):
@@ -144,7 +106,7 @@ def main():
                     else:
                         print(f"  > 第 {attempt + 1} 次尝试失败 (模型未返回结构化数据)。", file=sys.stderr)
                 except google_exceptions.ResourceExhausted as e:
-                    print(f"  ! 模型 {current_model_name} 调用次数已耗尽。错误: {e}", file=sys.stderr)
+                    print(f"  ! 模型 {current_model_name} 调用次数已耗尽。", file=sys.stderr)
                     if current_model_index < len(model_list) - 1:
                         current_model_index += 1
                         print(f"  ! 永久切换到下一个模型: {model_list[current_model_index]}", file=sys.stderr)
@@ -153,18 +115,13 @@ def main():
                     break 
                 except Exception as e:
                     print(f"  > 第 {attempt + 1} 次尝试出错: {e}", file=sys.stderr)
-                
                 if attempt < args.retries - 1:
                     time.sleep(args.timeout)
 
         if not final_result:
             total_failures += 1
             print(f"  处理 {d['id']} 失败。", file=sys.stderr)
-            d['AI'] = {
-                "title_translation": "错误：AI分析失败。", "tldr": None, "motivation": None, "method": None,
-                "result": None, "conclusion": None, "translation": None, "summary": None,
-                "comments": None, "keywords": None
-            }
+            d['AI'] = {"tldr": "错误：AI分析失败。", "motivation": None, "method": None, "result": None, "conclusion": None, "translation": None, "summary": None, "comments": None}
         else:
             d['AI'] = final_result
             
