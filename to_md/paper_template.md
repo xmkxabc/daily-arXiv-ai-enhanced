@@ -5,6 +5,8 @@
 
 **Keywords:** {keywords}
 
+**Comment:** {comment}
+
 > **TL;DR:** {tldr}
 
 <details>
@@ -17,6 +19,8 @@
 **Result:** {result}
 
 **Conclusion:** {conclusion}
+
+**AI_Comments:** {comments}
 
 > **ai_Abstract:** {ai_summary}
 

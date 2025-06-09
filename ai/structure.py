@@ -3,7 +3,7 @@ from typing import Optional
 
 class Structure(BaseModel):
     """
-    The structured data for a paper, including title translation and keywords.
+    定义AI需要生成的完整数据结构。
     """
     title_translation: Optional[str] = Field(default=None, description="Translate the paper's title into {language}.")
     tldr: Optional[str] = Field(default=None, description="generate a too long; didn't read summary")
