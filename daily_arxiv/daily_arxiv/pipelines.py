@@ -8,9 +8,9 @@ class ArxivPipeline:
     def __init__(self):
         # 初始化客户端，并设置礼貌的抓取延迟和重试次数
         self.client = arxiv.Client(
-            page_size = 25,
-            delay_seconds = 3,
-            num_retries = 5
+            page_size = 100,
+            #delay_seconds = 3,
+            #num_retries = 5
         )
         self.preference = os.environ.get('CATEGORIES', 'cs.CV, cs.CL').split(',')
         self.preference = list(map(lambda x: x.strip(), self.preference))

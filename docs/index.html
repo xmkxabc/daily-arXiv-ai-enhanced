@@ -1,112 +1,429 @@
-<!-- 文件: docs/index.html -->
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Enhanced arXiv Daily</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .details-arrow::-webkit-details-marker { display: none; }
-        .details-arrow > summary { list-style: none; }
-        .details-arrow > summary::after { content: '+'; font-size: 1.5rem; transition: transform 0.2s; float: right; }
-        .details-arrow[open] > summary::after { transform: rotate(45deg); }
-        .tag { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 500; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-        .horizontal-scrollbar::-webkit-scrollbar { height: 4px; }
-        .horizontal-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .horizontal-scrollbar::-webkit-scrollbar-thumb { background-color: #a0aec0; border-radius: 20px; }
-        .dark .horizontal-scrollbar::-webkit-scrollbar-thumb { background-color: #4a5568; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .details-arrow::-webkit-details-marker {
+            display: none;
+        }
+        .details-arrow > summary {
+            list-style: none;
+        }
+        .details-arrow > summary::after {
+            content: '+';
+            font-size: 1.5rem;
+            line-height: 1;
+            margin-left: 0.5rem;
+            transition: transform 0.2s;
+            float: right;
+            font-weight: 400;
+        }
+        .details-arrow[open] > summary::after {
+            transform: rotate(45deg);
+        }
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0; /* 防止标签在flex容器中被压缩 */
+        }
+        /* 为滚动条增加一点样式，使其在支持的浏览器中不那么突兀 */
+        .horizontal-scrollbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #a0aec0; /* gray-400 */
+            border-radius: 20px;
+        }
+        .dark .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #4a5568; /* gray-600 */
+        }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-    <div class="container mx-auto px-4 py-8">
-        <header class="text-center mb-12">
-            <h1 class="text-5xl font-bold text-gray-900 dark:text-white">AI增强的arXiv每日速报</h1>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <!-- 头部区域 -->
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">AI增强的arXiv每日速报</h1>
             <p class="mt-4 text-lg text-gray-600 dark:text-gray-400">由AI分析和翻译的每日arXiv论文摘要。</p>
+            <div class="absolute top-4 right-4">
+                <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                    <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 003.636 6.464l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1zM6.464 16.364l.707-.707a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414z"></path></svg>
+                </button>
+            </div>
         </header>
+
+        <!-- 控制器区域 -->
         <div class="sticky top-0 z-10 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm py-4 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                 <div class="relative md:col-span-2">
-                    <input type="text" id="search-input" placeholder="按标题或关键词搜索..." class="w-full pl-10 pr-4 py-2 border rounded-full bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" id="search-input" placeholder="按标题或关键词搜索..." class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                 </div>
                 <div class="relative">
-                     <select id="sort-select" class="w-full px-4 py-2 border rounded-full bg-white dark:bg-gray-800 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                     <select id="sort-select" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="date_desc">按最新日期排序</option>
                         <option value="relevance">按相关性排序</option>
                     </select>
-                    <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg>
+                    <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                    </svg>
                 </div>
             </div>
-            <div id="category-filters" class="mt-4 flex flex-nowrap gap-3 items-center overflow-x-auto pb-3 horizontal-scrollbar"></div>
+            <!-- **核心CSS修正**：增加了flex-nowrap和overflow-x-auto来实现水平滚动 -->
+            <div id="category-filters" class="mt-4 flex flex-nowrap gap-3 items-center overflow-x-auto pb-3 horizontal-scrollbar">
+                <!-- 分类过滤器将动态插入此处 -->
+            </div>
         </div>
+
+        <!-- 主内容区域 -->
         <main>
-            <div id="loading-state" class="text-center py-16"><p class="text-lg text-gray-500">正在加载论文...</p></div>
+            <div id="loading-state" class="text-center py-16">
+                <p class="text-lg text-gray-500">正在加载论文...</p>
+            </div>
             <div id="results-summary" class="text-center mb-6 text-gray-500 dark:text-gray-400"></div>
-            <div id="papers-list" class="grid grid-cols-1 gap-6"></div>
-            <div id="empty-state" class="text-center py-16 hidden"><p class="text-lg text-gray-500">找不到结果。</p></div>
+            <div id="papers-list" class="grid grid-cols-1 gap-6">
+                <!-- 论文卡片将动态插入此处 -->
+            </div>
+            <div id="empty-state" class="text-center py-16 hidden">
+                <p class="text-lg text-gray-500">找不到结果，请尝试调整您的搜索或过滤器。</p>
+            </div>
         </main>
-        <footer id="pagination" class="flex justify-center items-center gap-2 mt-12"></footer>
+        
+        <!-- 分页区域 -->
+        <footer id="pagination" class="flex justify-center items-center gap-2 mt-12">
+            <!-- 分页控制器将动态插入此处 -->
+        </footer>
     </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            let allPapers = [], filteredPapers = [], allCategories = new Set(), activeCategories = new Set(), currentPage = 1, papersPerPage = 10, currentSort = 'date_desc';
-            const searchInput = document.getElementById('search-input'), sortSelect = document.getElementById('sort-select'), papersList = document.getElementById('papers-list'), paginationContainer = document.getElementById('pagination'), loadingState = document.getElementById('loading-state'), emptyState = document.getElementById('empty-state'), categoryFiltersContainer = document.getElementById('category-filters'), resultsSummary = document.getElementById('results-summary');
+            // --- 状态管理 ---
+            let allPapers = [];
+            let filteredPapers = [];
+            let allCategories = new Set();
+            let activeCategories = new Set();
+            let currentPage = 1;
+            const papersPerPage = 10;
+            let currentSort = 'date_desc';
+
+            // --- DOM元素 ---
+            const searchInput = document.getElementById('search-input');
+            const sortSelect = document.getElementById('sort-select');
+            const papersList = document.getElementById('papers-list');
+            const paginationContainer = document.getElementById('pagination');
+            const loadingState = document.getElementById('loading-state');
+            const emptyState = document.getElementById('empty-state');
+            const categoryFiltersContainer = document.getElementById('category-filters');
+            const resultsSummary = document.getElementById('results-summary');
             
+            // --- 主题切换 ---
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+            if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                lightIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkIcon.classList.remove('hidden');
+            }
+            
+            themeToggleBtn.addEventListener('click', () => {
+                darkIcon.classList.toggle('hidden');
+                lightIcon.classList.toggle('hidden');
+
+                if (localStorage.getItem('color-theme')) {
+                    if (localStorage.getItem('color-theme') === 'light') {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('color-theme', 'dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('color-theme', 'light');
+                    }
+                } else {
+                    if (document.documentElement.classList.contains('dark')) {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('color-theme', 'light');
+                    } else {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('color-theme', 'dark');
+                    }
+                }
+            });
+
+
+            // --- 数据获取 ---
             async function fetchData() {
                 try {
                     const response = await fetch('database.json');
-                    if (!response.ok) throw new Error(`HTTP错误！状态: ${response.status}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误！状态: ${response.status}`);
+                    }
                     allPapers = await response.json();
-                    allPapers.forEach(p => { const cat = p.categories?.[0] || p.cate; if (cat) allCategories.add(cat); });
+                    
+                    allPapers.forEach(paper => {
+                        const primaryCategory = paper.categories?.[0] || paper.cate;
+                        if (primaryCategory) allCategories.add(primaryCategory);
+                    });
+                    
                     filteredPapers = [...allPapers];
                     loadingState.style.display = 'none';
-                    renderCategoryFilters(); render();
+                    renderCategoryFilters();
+                    render();
                 } catch (error) {
                     loadingState.innerHTML = `<p class="text-red-500">加载数据失败: ${error.message}</p>`;
                 }
             }
 
+            // --- 渲染逻辑 ---
+            function render() {
+                papersList.innerHTML = '';
+                emptyState.classList.add('hidden');
+                
+                if (filteredPapers.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    paginationContainer.innerHTML = '';
+                    resultsSummary.textContent = '';
+                    return;
+                }
+
+                resultsSummary.textContent = `在 ${allPapers.length} 篇论文中，共找到 ${filteredPapers.length} 篇。`;
+                
+                const startIndex = (currentPage - 1) * papersPerPage;
+                const endIndex = startIndex + papersPerPage;
+                const papersToRender = filteredPapers.slice(startIndex, endIndex);
+
+                papersToRender.forEach(paper => {
+                    const card = createPaperCard(paper);
+                    papersList.appendChild(card);
+                });
+
+                renderPagination();
+            }
+
             function createPaperCard(paper) {
                 const aiData = paper.AI || {};
-                const sanitize = (str) => { if (!str) return ''; const temp = document.createElement('div'); temp.textContent = str; return temp.innerHTML; };
+                const authors = Array.isArray(paper.authors) ? paper.authors.join(', ') : 'N/A';
+                const keywords = aiData.keywords || 'N/A';
+                const primaryCategory = paper.categories?.[0] || paper.cate || 'N/A';
+                
+                const sanitize = (str) => {
+                    if (str === null || str === undefined) return '';
+                    const temp = document.createElement('div');
+                    temp.textContent = str;
+                    return temp.innerHTML;
+                };
+
                 const card = document.createElement('div');
-                card.className = 'bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden';
-                const arxivCommentHTML = paper.comment ? `<p class="text-sm text-gray-600 dark:text-gray-400 mt-2 p-2 bg-gray-100 dark:bg-gray-700/50 rounded flex items-center"><svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span><b>作者备注:</b> ${sanitize(paper.comment)}</span></p>` : '';
-                const aiCommentHTML = aiData.comments ? `<div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800"><p class="font-semibold mb-1 flex items-center text-blue-800 dark:text-blue-300"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>AI点评</p><p class="text-gray-700 dark:text-gray-300">${sanitize(aiData.comments)}</p></div>` : '';
-                card.innerHTML = `<div class="p-6">
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">${sanitize(paper.cate)} | ${sanitize(paper.date)}</p>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">${sanitize(paper.title)}</h2>
-                        <p class="text-gray-600 dark:text-gray-300 italic my-2">${sanitize(aiData.title_translation || '')}</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">${sanitize(Array.isArray(paper.authors) ? paper.authors.join(', ') : 'N/A')}</p>
-                        ${arxivCommentHTML}
-                        <div class="mt-4"><b class="font-semibold">关键词:</b> <span class="text-indigo-600 dark:text-indigo-400">${sanitize(aiData.keywords || 'N/A')}</span></div>
-                        <div class="mt-4 bg-gray-100 dark:bg-gray-700 p-4 rounded-lg"><b class="font-semibold">TL;DR:</b> ${sanitize(aiData.tldr || 'N/A')}</div>
-                        ${aiCommentHTML}
-                        <details class="details-arrow mt-4">
-                            <summary class="cursor-pointer font-semibold text-indigo-600 dark:text-indigo-400">显示/隐藏详细分析</summary>
+                card.className = 'bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-[1.02]';
+                card.innerHTML = `
+                    <div class="p-6">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">${sanitize(primaryCategory)} | ${sanitize(paper.date)}</p>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${sanitize(paper.title)}</h2>
+                        <p class="text-gray-600 dark:text-gray-300 italic mb-3">
+                            ${sanitize(aiData.title_translation || '暂无标题翻译。')}
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${sanitize(authors)}</p>
+                        
+                        <div class="mb-4">
+                            <span class="font-semibold">关键词:</span>
+                            <span class="text-indigo-600 dark:text-indigo-400">${sanitize(keywords)}</span>
+                        </div>
+                        
+                        <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg mb-4">
+                            <p class="font-semibold mb-1">TL;DR:</p>
+                            <p>${sanitize(aiData.tldr || 'N/A')}</p>
+                        </div>
+
+                        <details class="details-arrow">
+                            <summary class="cursor-pointer font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-between">
+                                <span>显示完整的AI分析与摘要</span>
+                            </summary>
                             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
-                                <div><h4 class="font-semibold text-lg">AI生成的摘要</h4><p>${sanitize(aiData.summary || 'N/A')}</p></div>
-                                <div><h4 class="font-semibold text-lg">研究动机</h4><p>${sanitize(aiData.motivation || 'N/A')}</p></div>
-                                <div><h4 class="font-semibold text-lg">摘要翻译</h4><p>${sanitize(aiData.translation || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">AI生成的摘要</h4><p>${sanitize(aiData.summary || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">研究动机</h4><p>${sanitize(aiData.motivation || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">研究方法</h4><p>${sanitize(aiData.method || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">摘要翻译</h4><p>${sanitize(aiData.translation || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">原文摘要</h4><p class="text-sm text-gray-500 dark:text-gray-400">${sanitize(paper.summary)}</p></div>
                             </div>
                         </details>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-3">
-                         <a href="${sanitize(paper.url)}" target="_blank" rel="noopener noreferrer" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">在arXiv上查看 →</a>
-                    </div>`;
+                         <a href="${sanitize(paper.url)}" target="_blank" rel="noopener noreferrer" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                            在arXiv上查看 →
+                        </a>
+                    </div>
+                `;
                 return card;
             }
-            function renderCategoryFilters() { /* ... */ }
-            function renderPagination() { /* ... */ }
-            function getPaginationPages(currentPage, totalPages, width = 2) { /* ... */ }
-            function applyFiltersAndSort() { /* ... */ }
-            function toggleCategoryFilter(category) { /* ... */ }
+            
+            function renderCategoryFilters() {
+                categoryFiltersContainer.innerHTML = '<span class="font-semibold mr-4">按分类筛选:</span>';
+                const sorted = [...allCategories].sort();
+                sorted.forEach(cat => {
+                    const tag = document.createElement('button');
+                    tag.textContent = cat;
+                    tag.className = 'tag bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-indigo-200 dark:hover:bg-indigo-800';
+                    tag.dataset.category = cat;
+                    tag.onclick = () => toggleCategoryFilter(cat);
+                    categoryFiltersContainer.appendChild(tag);
+                });
+            }
+
+            function renderPagination() {
+                paginationContainer.innerHTML = '';
+                const totalPages = Math.ceil(filteredPapers.length / papersPerPage);
+                if (totalPages <= 1) return;
+
+                const prevButton = document.createElement('button');
+                prevButton.textContent = '«';
+                prevButton.disabled = currentPage === 1;
+                prevButton.className = "px-4 py-2 mx-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed";
+                prevButton.onclick = () => {
+                    currentPage--;
+                    render();
+                };
+                paginationContainer.appendChild(prevButton);
+
+                const pages = getPaginationPages(currentPage, totalPages);
+                pages.forEach(pageNum => {
+                    if (pageNum === '...') {
+                        const dots = document.createElement('span');
+                        dots.textContent = '...';
+                        dots.className = 'px-4 py-2 mx-1';
+                        paginationContainer.appendChild(dots);
+                    } else {
+                        const pageButton = document.createElement('button');
+                        pageButton.textContent = pageNum;
+                        pageButton.className = `px-4 py-2 mx-1 rounded-lg border border-gray-300 dark:border-gray-600 ${currentPage === pageNum ? 'bg-indigo-500 text-white dark:bg-indigo-600' : 'bg-white dark:bg-gray-800'}`;
+                        pageButton.onclick = () => {
+                            currentPage = pageNum;
+                            render();
+                        };
+                        paginationContainer.appendChild(pageButton);
+                    }
+                });
+
+                const nextButton = document.createElement('button');
+                nextButton.textContent = '»';
+                nextButton.disabled = currentPage === totalPages;
+                nextButton.className = "px-4 py-2 mx-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed";
+                nextButton.onclick = () => {
+                    currentPage++;
+                    render();
+                };
+                paginationContainer.appendChild(nextButton);
+            }
+            
+            function getPaginationPages(currentPage, totalPages, width = 2) {
+                if (totalPages <= (width * 2 + 3)) {
+                    return [...Array(totalPages).keys()].map(i => i + 1);
+                }
+
+                const pages = [1];
+                if (currentPage - width > 2) pages.push('...');
+                
+                for (let i = Math.max(2, currentPage - width); i <= Math.min(totalPages - 1, currentPage + width); i++) {
+                    pages.push(i);
+                }
+
+                if (currentPage + width < totalPages - 1) pages.push('...');
+                pages.push(totalPages);
+                return pages;
+            }
+
+            // --- 过滤、排序、搜索逻辑 ---
+            function applyFiltersAndSort() {
+                let tempPapers = [...allPapers];
+
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                if (searchTerm) {
+                    currentSort = 'relevance'; 
+                    sortSelect.value = 'relevance';
+                    tempPapers = tempPapers.map(paper => {
+                        const title = (paper.title || '').toLowerCase();
+                        const keywords = (paper.AI?.keywords || '').toLowerCase();
+                        let score = 0;
+                        if (title.includes(searchTerm)) score += 2;
+                        if (keywords.includes(searchTerm)) score += 1;
+                        return { ...paper, score };
+                    }).filter(paper => paper.score > 0);
+                } else {
+                    if (sortSelect.value === 'relevance') {
+                       currentSort = 'date_desc';
+                       sortSelect.value = 'date_desc';
+                    }
+                }
+                
+                if (activeCategories.size > 0) {
+                    tempPapers = tempPapers.filter(paper => activeCategories.has(paper.categories?.[0] || paper.cate));
+                }
+
+                if (currentSort === 'date_desc') {
+                    tempPapers.sort((a, b) => b.date.localeCompare(a.date));
+                } else if (currentSort === 'relevance') {
+                    tempPapers.sort((a, b) => (b.score || 0) - (a.score || 0));
+                }
+
+                filteredPapers = tempPapers;
+                currentPage = 1;
+                render();
+            }
+
+            function toggleCategoryFilter(category) {
+                const button = categoryFiltersContainer.querySelector(`[data-category="${category}"]`);
+                if (activeCategories.has(category)) {
+                    activeCategories.delete(category);
+                    button.classList.remove('bg-indigo-500', 'dark:bg-indigo-600', 'text-white');
+                    button.classList.add('bg-gray-200', 'dark:bg-gray-700');
+                } else {
+                    activeCategories.add(category);
+                    button.classList.add('bg-indigo-500', 'dark:bg-indigo-600', 'text-white');
+                    button.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+                }
+                applyFiltersAndSort();
+            }
+            
+            // --- 事件监听器 ---
             let debounceTimer;
-            searchInput.addEventListener('input', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => applyFiltersAndSort(), 300); });
-            sortSelect.addEventListener('change', (e) => { currentSort = e.target.value; if(currentSort === 'relevance' && !searchInput.value) { sortSelect.value = 'date_desc'; currentSort = 'date_desc'; } applyFiltersAndSort(); });
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    applyFiltersAndSort();
+                }, 300); 
+            });
+            
+            sortSelect.addEventListener('change', (e) => {
+                currentSort = e.target.value;
+                if(currentSort === 'relevance' && !searchInput.value) {
+                    sortSelect.value = 'date_desc';
+                    currentSort = 'date_desc';
+                }
+                applyFiltersAndSort();
+            });
+
+            // --- 初始化 ---
             fetchData();
         });
     </script>
