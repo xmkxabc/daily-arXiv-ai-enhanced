@@ -17,15 +17,23 @@ def get_today_date():
 def load_json_data(file_path):
     """
     Loads data from a JSON file with proper error handling.
+    Returns None if the file is not found or is empty/invalid.
     """
+    if not os.path.exists(file_path):
+        print(f"信息: 文件未找到 {file_path}. 可能当天没有论文。", file=sys.stdout)
+        return None
+    
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"错误: 文件未找到 {file_path}", file=sys.stderr)
+            data = json.load(f)
+            if not data: # Check if the list is empty
+                print(f"信息: JSON文件为空 {file_path}. 可能当天没有论文。", file=sys.stdout)
+                return None
+            return data
     except json.JSONDecodeError:
         print(f"错误: 解析JSON文件失败 {file_path}", file=sys.stderr)
-    sys.exit(1) # Exit if essential data cannot be loaded
+        return None
+
 
 def load_template(file_path):
     """
@@ -52,9 +60,19 @@ def main():
     main_template_file = 'template.md'
     output_file = f'data/{today_str}.md'
     
-    data = load_json_data(input_file)
-    paper_template = load_template(paper_template_file)
     main_template = load_template(main_template_file)
+    data = load_json_data(input_file)
+
+    # If no data, create a simple report and exit
+    if data is None:
+        final_content = main_template.replace('{date}', today_str)
+        final_content = final_content.replace('{content}', f"### 今日没有找到新论文。\n\n> 文件 '{input_file}' 未找到或为空。")
+        with open(output_file, "w", encoding='utf-8') as f:
+            f.write(final_content)
+        print(f"成功生成报告 (无新论文): {output_file}")
+        sys.exit(0)
+        
+    paper_template = load_template(paper_template_file)
 
     # --- Your category preference and sorting logic ---
     preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI,stat.ML,eess.IV')
@@ -67,7 +85,6 @@ def main():
 
     papers_by_category = defaultdict(list)
     for paper in data:
-        # Use 'category' from scraper, default to 'Uncategorized'
         primary_category = paper.get("category", "Uncategorized")
         papers_by_category[primary_category].append(paper)
     
@@ -87,14 +104,12 @@ def main():
         for item in papers_by_category[cate]:
             ai_data = item.get('AI', {})
             
-            # Use a dictionary for cleaner replacement
             replacement_data = {
                 "idx": next(paper_idx_counter),
                 "title": item.get("title", "N/A"),
                 "url": item.get('url', '#'),
                 "authors": item.get("authors", "N/A"),
                 "abstract": item.get("abstract", "N/A"),
-                "comment": item.get("comment", ""), # arXiv comment
                 # AI generated fields
                 "title_translation": ai_data.get('title_translation', ''),
                 "keywords": ai_data.get('keywords', ''),
@@ -102,17 +117,14 @@ def main():
                 "comment": ai_data.get('comment', '')
             }
             
-            # Efficiently replace all placeholders
             temp_paper_content = paper_template
             for key, value in replacement_data.items():
                 temp_paper_content = temp_paper_content.replace(f"{{{key}}}", str(value or ''))
             paper_content_parts.append(temp_paper_content)
 
     # --- Assemble Final Markdown ---
-    # Combine ToC and all paper content
     final_paper_content = "\n".join(toc_parts) + "\n" + "\n".join(paper_content_parts)
     
-    # Populate the main template
     final_content = main_template.replace('{date}', today_str)
     final_content = final_content.replace('{content}', final_paper_content)
 
