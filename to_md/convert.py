@@ -11,13 +11,11 @@ from zoneinfo import ZoneInfo
 def parse_arguments():
     """
     Parses command-line arguments.
-    Accepts --input, --template, and --output as required arguments.
+    Accepts only --data, as called by the user's run.sh script.
     """
     parser = argparse.ArgumentParser(description="将JSONL文件转换为带目录的Markdown文件。")
-    # --- 关键修正: 匹配 run.sh 传递的参数 ---
-    parser.add_argument("--input", type=str, required=True, help="输入的 JSONL 文件路径")
-    parser.add_argument("--template", type=str, required=True, help="单篇论文的模板文件路径 (paper_template.md)")
-    parser.add_argument("--output", type=str, required=True, help="输出的 Markdown 文件路径")
+    # --- 关键修正: 只接收 --data 参数，与 run.sh 匹配 ---
+    parser.add_argument("--data", type=str, required=True, help="输入的 JSONL 文件路径, e.g., ../data/YYYY-MM-DD_AI_enhanced_Chinese.jsonl")
     return parser.parse_args()
 
 def load_jsonl_data(file_path):
@@ -57,19 +55,20 @@ def main():
     """
     args = parse_arguments()
     
-    # --- 核心修正: 直接使用传入的参数作为文件路径 ---
-    input_file = args.input
-    paper_template_file = args.template
-    output_file = args.output
-    # 假设主模板文件在项目的根目录
-    main_template_file = 'template.md'
+    # --- 核心修正: 从 --data 参数推导所有路径 ---
+    input_file = args.data
     
-    # 从输出文件名中提取日期
-    match = re.search(r'(\d{4}-\d{2}-\d{2})', output_file)
+    # 从输入文件名中提取日期
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', input_file)
     if not match:
-        print(f"错误: 无法从输出文件名 '{output_file}' 中提取日期。文件名格式应为 YYYY-MM-DD.md", file=sys.stderr)
+        print(f"错误: 无法从输入文件名 '{input_file}' 中提取日期。文件名格式应为 YYYY-MM-DD*.jsonl", file=sys.stderr)
         sys.exit(1)
     date_str = match.group(1)
+
+    # 根据脚本在 to_md/ 中运行的事实，构建正确的相对路径
+    paper_template_file = 'paper_template.md'       # 同一目录下
+    main_template_file = '../template.md'           # 上一级目录下
+    output_file = f'../data/{date_str}.md'          # 上一级目录的 data 子目录下
 
     main_template = load_template(main_template_file)
     data = load_jsonl_data(input_file)
