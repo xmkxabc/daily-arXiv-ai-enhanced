@@ -54,8 +54,10 @@ def main():
     """
     today_str = get_today_date()
     
-    # Use project-consistent file paths
-    input_file = 'daily_arxiv/papers.json'
+    # --- FIX ---
+    # Corrected the path to look for papers.json in the project root,
+    # where the other scripts create it.
+    input_file = 'papers.json' 
     paper_template_file = 'to_md/paper_template.md'
     main_template_file = 'template.md'
     output_file = f'data/{today_str}.md'
