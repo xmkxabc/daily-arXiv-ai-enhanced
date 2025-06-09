@@ -25,6 +25,7 @@ jobs:
           uv sync
 
       - name: Run Data Processing Pipeline
+        id: run_scripts # 给这个步骤一个ID，方便后续引用它的输出
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           LANGUAGE: ${{ vars.LANGUAGE }}
@@ -61,26 +62,29 @@ jobs:
           echo "Step 5: Updating main README.md..."
           python update_readme.py
           
+          # 将报告路径设置为输出，供后续步骤使用
           echo "report_path=$OUTPUT_MD_FILE" >> $GITHUB_OUTPUT
 
           echo "工作流成功完成！"
-       
-      #注释   
-      - name: Set Current Date
-        id: date
-        run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       
-      #注释 
-      - name: Create or Update Daily Digest Issue
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # **修正**: 从上一步的环境变量中获取日期
-          title: "每日速报 (Daily Digest): ${{ env.TODAY_DATE }}"
-          content-filepath: "${{ steps.run_scripts.outputs.report_path }}"
-          labels: daily-digest, automated
-      
-      #注释
+      # --- 全新增加的诊断步骤 ---
+      - name: Run Diagnostics Before Commit
+        if: always() # 无论之前的步骤是否成功，都运行此诊断
+        run: |
+          echo "================ DIAGNOSTICS ================"
+          echo " "
+          echo ">>> 1. Displaying content of .gitignore file:"
+          cat .gitignore
+          echo " "
+          echo ">>> 2. Listing files in the 'data' directory:"
+          ls -la data/
+          echo " "
+          echo ">>> 3. Displaying git status before 'git add':"
+          git status
+          echo " "
+          echo "============================================="
+
+      # --- 提交和推送代码的步骤 (保持不变) ---
       - name: Commit and push changes
         run: |
           git config --global user.email "${{ vars.EMAIL }}"
@@ -88,42 +92,29 @@ jobs:
           git add .
           if ! git diff --staged --quiet; then
             git commit -m "update"
+            git pull origin main --rebase
+            git push
           else
             echo "No changes to commit."
-          fi      
-      #注释
-      - name: Pull latest changes
-        run: git pull origin main --rebase
+          fi
 
-      #注释
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}    
-
+      # --- 部署网站的步骤 (保持不变) ---
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 上传 `docs` 目录作为网站文件
           path: ./docs
 
-  # --- 任务2: 部署网站 ---
   deploy:
-    # 依赖于 'build' 任务成功完成
     needs: build
-    # 部署任务需要的权限
     permissions:
-      pages: write      # 写入GitHub Pages
-      id-token: write   # 用于身份验证
-    
-    # 部署环境的配置
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to GitHub Pages
