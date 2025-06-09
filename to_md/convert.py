@@ -5,17 +5,14 @@ import argparse
 import re
 from collections import defaultdict
 from itertools import count
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 def parse_arguments():
     """
     Parses command-line arguments.
-    Accepts only --data, as called by the user's run.sh script.
+    Accepts --data, as called by the user's run.sh script.
     """
     parser = argparse.ArgumentParser(description="将JSONL文件转换为带目录的Markdown文件。")
-    # --- 关键修正: 只接收 --data 参数，与 run.sh 匹配 ---
-    parser.add_argument("--data", type=str, required=True, help="输入的 JSONL 文件路径, e.g., ../data/YYYY-MM-DD_AI_enhanced_Chinese.jsonl")
+    parser.add_argument("--data", type=str, required=True, help="输入的 JSONL 文件路径")
     return parser.parse_args()
 
 def load_jsonl_data(file_path):
@@ -55,7 +52,6 @@ def main():
     """
     args = parse_arguments()
     
-    # --- 核心修正: 从 --data 参数推导所有路径 ---
     input_file = args.data
     
     # 从输入文件名中提取日期
@@ -65,10 +61,10 @@ def main():
         sys.exit(1)
     date_str = match.group(1)
 
-    # 根据脚本在 to_md/ 中运行的事实，构建正确的相对路径
-    paper_template_file = 'paper_template.md'       # 同一目录下
-    main_template_file = '../template.md'           # 上一级目录下
-    output_file = f'../data/{date_str}.md'          # 上一级目录的 data 子目录下
+    # --- 关键修正: 根据在根目录执行的事实，修正所有文件路径 ---
+    paper_template_file = 'to_md/paper_template.md' # 纸张模板在 to_md/ 子目录中
+    main_template_file = 'template.md'              # 主模板在根目录中
+    output_file = f'data/{date_str}.md'             # 输出文件在 data/ 子目录中
 
     main_template = load_template(main_template_file)
     data = load_jsonl_data(input_file)
