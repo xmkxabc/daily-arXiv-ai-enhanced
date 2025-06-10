@@ -13,14 +13,15 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
-# **优化点 1: 导入更稳定、更适合此场景的 PydanticOutputParser**
 from langchain_core.output_parsers import PydanticOutputParser
 from structure import Structure
 
+# 加载环境变量
 if os.path.exists('.env'):
     dotenv.load_dotenv()
 
-# --- 文件加载 (保持不变) ---
+# --- 文件加载 ---
+# 从脚本所在目录加载提示模板文件，增强可移植性
 script_dir = os.path.dirname(os.path.abspath(__file__))
 try:
     with open(os.path.join(script_dir, "template.txt"), "r", encoding="utf-8") as f:
@@ -33,7 +34,7 @@ except FileNotFoundError as e:
 
 
 def parse_args():
-    """解析命令行参数。(保持不变)"""
+    """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="使用AI摘要增强arXiv数据。")
     parser.add_argument("--data", type=str, required=True, help="要处理的JSONL数据文件。")
     parser.add_argument("--retries", type=int, default=3, help="对每篇论文的最大重试次数。")
@@ -42,8 +43,8 @@ def parse_args():
 
 def is_response_valid(result: Structure):
     """
-    终极验证：检查所有字段都必须存在且为非空字符串。
-    参数类型现在是 Structure 对象。
+    验证响应：检查所有字段都必须存在且为非空字符串。
+    由于Structure模型已强制所有字段为必需，此函数主要作为防止AI返回空字符串的额外防线。
     """
     if not result:
         return False
@@ -54,6 +55,7 @@ def is_response_valid(result: Structure):
 
     for field in all_fields:
         value = result_dict.get(field)
+        # 确保值不是None（理论上不会发生）并且不是一个空的或只包含空格的字符串
         if value is None or (isinstance(value, str) and not value.strip()):
             return False
             
@@ -63,6 +65,7 @@ def main():
     """主函数，运行增强过程。"""
     args = parse_args()
     
+    # 从环境变量获取模型配置，提供默认值
     primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-latest')
     fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-pro-latest,gemini-1.0-pro")
     
@@ -70,13 +73,15 @@ def main():
     if fallback_models_str:
         model_list.extend([name.strip() for name in fallback_models_str.split(',') if name.strip()])
 
-    language = os.environ.get("LANGUAGE", 'Chinese') 
+    language = os.environ.get("LANGUAGE", 'Chinese')
 
+    # 检查API密钥
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
-        print("错误: 找不到 GOOGLE_API_KEY。", file=sys.stderr)
+        print("错误: 找不到环境变量 GOOGLE_API_KEY。", file=sys.stderr)
         sys.exit(1)
 
+    # 读取并解析输入的JSONL文件
     try:
         with open(args.data, "r", encoding="utf-8") as f:
             data = [json.loads(line) for line in f if line.strip()]
@@ -84,40 +89,38 @@ def main():
         print(f"错误: 处理文件 {args.data} 时出错: {e}", file=sys.stderr)
         return
 
-    # 数据去重 (保持不变)
+    # 根据ID对数据去重
     seen_ids = set()
     unique_data = [item for item in data if item.get('id') not in seen_ids and not seen_ids.add(item['id'])]
     data = unique_data
     print(f"从 {args.data} 加载了 {len(data)} 篇不重复的论文", file=sys.stderr)
 
-    # **优化点 2: 设置 PydanticOutputParser**
+    # 设置Pydantic输出解析器
     output_parser = PydanticOutputParser(pydantic_object=Structure)
 
-    # **优化点 3: 将格式化指令注入到提示模板中**
-    # 这会告诉LLM如何格式化输出以匹配Structure模型
+    # 将格式化指令注入到提示模板中
     human_template = template_content + "\n\n{format_instructions}\n"
     
-    # **修复 TypeError 的改动点**
-    # 先创建 PromptTemplate
+    # 创建完整的提示模板
     prompt = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
         HumanMessagePromptTemplate.from_template(human_template)
     ])
     
-    # 再使用 .partial() 方法注入部分变量，这种方法向后兼容性更好
+    # 使用 .partial() 方法注入格式化指令
     prompt_template = prompt.partial(
         format_instructions=output_parser.get_format_instructions()
     )
 
-    # 初始化模型和链
+    # 初始化所有指定的模型和链
     model_chains = {}
     for model_name in model_list:
         try:
             llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
-            # **优化点 4: 构建新的、更稳定的链，移除 .bind_tools()**
+            # 构建稳定、可靠的链
             chain = prompt_template | llm | output_parser
             model_chains[model_name] = chain
-            print(f"模型已设置: {model_name}", file=sys.stderr)
+            print(f"模型已成功设置: {model_name}", file=sys.stderr)
         except Exception as e:
             print(f"警告：无法初始化模型 {model_name}。错误：{e}", file=sys.stderr)
 
@@ -130,13 +133,18 @@ def main():
         print(f"正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
         final_result = None
         
-        current_model_name = model_list[current_model_index]
-        print(f"  使用当前模型: {current_model_name}")
-        
-        chain = model_chains.get(current_model_name)
-        if not chain:
-            print(f"  错误：当前模型 {current_model_name} 未成功初始化，跳过。", file=sys.stderr)
-        else:
+        # 循环尝试，直到成功或模型耗尽
+        while current_model_index < len(model_list):
+            current_model_name = model_list[current_model_index]
+            print(f"  使用当前模型: {current_model_name}")
+            
+            chain = model_chains.get(current_model_name)
+            if not chain:
+                print(f"  错误：当前模型 {current_model_name} 未成功初始化，跳过。", file=sys.stderr)
+                # 直接尝试下一个模型
+                current_model_index += 1
+                continue
+
             for attempt in range(args.retries):
                 try:
                     response_object = chain.invoke({
@@ -148,34 +156,38 @@ def main():
                     if response_object and is_response_valid(response_object):
                         final_result = response_object.model_dump() # 从Pydantic对象获取字典
                         print(f"  > 第 {attempt + 1} 次尝试成功", file=sys.stderr)
-                        break
-                    else:
-                        print(f"  > 第 {attempt + 1} 次尝试返回数据无效或验证失败。", file=sys.stderr)
-
+                        break # 当前论文处理成功，跳出重试循环
+                
+                except langchain_core.exceptions.OutputParserException as e:
+                    print(f"  > 第 {attempt + 1} 次尝试输出解析失败: {e}", file=sys.stderr)
                 except google_exceptions.ResourceExhausted as e:
-                    print(f"  ! 模型 {current_model_name} 调用次数已耗尽。错误: {e}", file=sys.stderr)
-                    if current_model_index < len(model_list) - 1:
-                        current_model_index += 1
-                        print(f"  ! 永久切换到下一个模型: {model_list[current_model_index]}", file=sys.stderr)
-                    else:
-                        print("  ! 所有模型均已耗尽。", file=sys.stderr)
-                    break 
+                    print(f"  ! 模型 {current_model_name} 配额耗尽。错误: {e}", file=sys.stderr)
+                    current_model_index += 1 # 永久切换到下一个模型
+                    print(f"  ! 切换到下一个模型: {model_list[current_model_index] if current_model_index < len(model_list) else '无可用模型'}", file=sys.stderr)
+                    break # 跳出重试循环，使用新模型
                 except Exception as e:
-                    print(f"  > 第 {attempt + 1} 次尝试出错: {e}", file=sys.stderr)
+                    print(f"  > 第 {attempt + 1} 次尝试时发生未知错误: {e}", file=sys.stderr)
                 
                 if attempt < args.retries - 1:
                     time.sleep(args.timeout)
-
+            
+            if final_result or current_model_index >= len(model_list):
+                # 如果成功，或因配额问题切换模型，则跳出外层while循环
+                break
+        
         if not final_result:
             total_failures += 1
             print(f"  处理 {d['id']} 失败。", file=sys.stderr)
-            d['AI'] = {"title_translation": "错误：AI分析失败."} # 简化错误信息
+            # **优化点**: 失败时，生成一个符合Structure结构的完整错误记录
+            error_message = "错误：AI分析失败。"
+            d['AI'] = {field: error_message for field in Structure.model_fields.keys()}
         else:
             d['AI'] = final_result
             
         enhanced_data.append(d)
-        time.sleep(2) # 降低请求频率
+        time.sleep(2) # 友好地降低请求频率，避免触发速率限制
 
+    # 构造输出文件名并写入结果
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
     with open(output_filename, "w", encoding="utf-8") as f:
         for d_item in enhanced_data:
@@ -185,3 +197,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
