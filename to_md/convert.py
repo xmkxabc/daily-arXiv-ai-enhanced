@@ -128,7 +128,8 @@ def main():
     content_by_category_str = ""
     for cate in sorted_categories:
         slug = slugify(cate)
-        content_by_category_str += f"<a id='{slug}'></a>\n## {cate}  [⬆️ 返回目录](#toc)\n\n"
+        # **已修改**: 使用 <small> 标签来缩小导航链接的字体
+        content_by_category_str += f"<a id='{slug}'></a>\n## {cate}  <small>[⬆️ 返回目录](#toc)</small>\n\n"
         
         for paper_data in papers_by_category[cate]:
             paper_id = paper_data.get("id")
