@@ -16,7 +16,6 @@ if os.path.exists('.env'):
     dotenv.load_dotenv()
 
 # --- 文件加载 ---
-# 从脚本所在目录加载提示模板文件，增强可移植性
 script_dir = os.path.dirname(os.path.abspath(__file__))
 try:
     with open(os.path.join(script_dir, "template.txt"), "r", encoding="utf-8") as f:
@@ -32,159 +31,146 @@ def parse_args():
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="使用AI摘要增强arXiv数据。")
     parser.add_argument("--data", type=str, required=True, help="要处理的JSONL数据文件。")
-    parser.add_argument("--retries", type=int, default=3, help="对每篇论文的最大重试次数。")
-    parser.add_argument("--timeout", type=int, default=1, help="重试之间的等待秒数。")
+    # **语义已恢复**: retries是针对每个模型/密钥组合的重试次数。
+    parser.add_argument("--retries", type=int, default=3, help="对每个模型任务的最大重试次数。")
+    parser.add_argument("--timeout", type=int, default=1, help="失败尝试之间的等待秒数。")
     return parser.parse_args()
 
 def is_response_valid(result: Structure):
-    """
-    验证响应：检查所有字段都必须存在且为非空字符串。
-    由于Structure模型已强制所有字段为必需，此函数主要作为防止AI返回空字符串的额外防线。
-    """
+    """验证响应，确保所有字段都为非空字符串。"""
     if not result:
         return False
-    
-    # 将 Pydantic 对象转为字典进行验证
     result_dict = result.model_dump()
     all_fields = Structure.model_fields.keys()
-
     for field in all_fields:
         value = result_dict.get(field)
-        # 确保值不是None（理论上不会发生）并且不是一个空的或只包含空格的字符串
         if value is None or (isinstance(value, str) and not value.strip()):
             return False
-            
     return True
 
 def main():
     """主函数，运行增强过程。"""
     args = parse_args()
     
-    # 从环境变量获取模型配置，提供默认值
+    # --- 加载密钥和模型配置 ---
+    primary_api_key = os.environ.get("GOOGLE_API_KEY")
+    secondary_api_key = os.environ.get("SECONDARY_GOOGLE_API_KEY")
     primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-latest')
     fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-pro-latest,gemini-1.0-pro")
     
-    model_list = [primary_model_name]
-    if fallback_models_str:
-        model_list.extend([name.strip() for name in fallback_models_str.split(',') if name.strip()])
+    # 构建级联调用计划
+    cascade_plan = []
+    if primary_api_key:
+        cascade_plan.append({
+            "key_name": "主密钥", 
+            "api_key": primary_api_key, 
+            "model_name": primary_model_name
+        })
+    if secondary_api_key:
+        secondary_model_names = [primary_model_name]
+        if fallback_models_str:
+            secondary_model_names.extend([name.strip() for name in fallback_models_str.split(',') if name.strip()])
+        for model_name in secondary_model_names:
+            cascade_plan.append({
+                "key_name": "副密钥", 
+                "api_key": secondary_api_key, 
+                "model_name": model_name
+            })
+            
+    if not cascade_plan:
+        print("错误: 找不到任何可用的API密钥来构建调用计划。", file=sys.stderr)
+        sys.exit(1)
 
     language = os.environ.get("LANGUAGE", 'Chinese')
 
-    # 检查API密钥
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        print("错误: 找不到环境变量 GOOGLE_API_KEY。", file=sys.stderr)
-        sys.exit(1)
-
-    # 读取并解析输入的JSONL文件
+    # 读取和预处理数据
     try:
         with open(args.data, "r", encoding="utf-8") as f:
             data = [json.loads(line) for line in f if line.strip()]
     except Exception as e:
         print(f"错误: 处理文件 {args.data} 时出错: {e}", file=sys.stderr)
         return
-
-    # 根据ID对数据去重
     seen_ids = set()
     unique_data = [item for item in data if item.get('id') not in seen_ids and not seen_ids.add(item['id'])]
     data = unique_data
     print(f"从 {args.data} 加载了 {len(data)} 篇不重复的论文", file=sys.stderr)
 
-    # ** 已修复 **
-    # 创建提示模板。不再需要手动插入格式化指令。
     prompt_template = ChatPromptTemplate.from_messages([
         ("system", system_prompt_template),
         ("human", template_content)
     ])
 
-    # 初始化所有指定的模型和链
+    # 预先初始化所有需要的调用链
     model_chains = {}
-    for model_name in model_list:
+    for task in cascade_plan:
+        key = (task["api_key"], task["model_name"])
+        if key in model_chains: continue
         try:
-            # 创建基础LLM
-            llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
-            
-            # ** 已修复: 使用 .with_structured_output() 方法获取更稳定的JSON输出 **
-            # 这个方法将Pydantic模型作为工具绑定到LLM，并强制模型使用它。
+            llm = ChatGoogleGenerativeAI(model=task["model_name"], google_api_key=task["api_key"])
             structured_llm = llm.with_structured_output(Structure)
-            
-            # 构建完整的链
             chain = prompt_template | structured_llm
-            model_chains[model_name] = chain
-            print(f"模型已成功设置: {model_name}", file=sys.stderr)
+            model_chains[key] = chain
+            print(f"模型已为<{task['key_name']}>成功设置: {task['model_name']}", file=sys.stderr)
         except Exception as e:
-            print(f"警告：无法初始化模型 {model_name}。错误：{e}", file=sys.stderr)
+            model_chains[key] = None
+            print(f"警告：无法为<{task['key_name']}>初始化模型 {task['model_name']}。错误：{e}", file=sys.stderr)
 
-    
     enhanced_data = []
     total_failures = 0
-    current_model_index = 0
 
     for idx, d in enumerate(data):
-        print(f"正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
+        print(f"\n正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
         final_result = None
         
-        active_model_name = model_list[current_model_index]
-        
-        # 只要当前模型有效，就用它重试
-        for attempt in range(args.retries):
-            # 检查是否还有可用的模型
-            if current_model_index >= len(model_list):
-                print("  ! 所有模型均已尝试或耗尽，无法继续处理此论文。", file=sys.stderr)
-                break
-
-            active_model_name = model_list[current_model_index]
-            chain = model_chains.get(active_model_name)
+        # --- **新逻辑**: 经典重试与级联 ---
+        # 外层循环遍历级联计划
+        for task in cascade_plan:
+            key = (task["api_key"], task["model_name"])
+            chain = model_chains.get(key)
             
             if not chain:
-                print(f"  错误：模型 {active_model_name} 未成功初始化，切换到下一个。", file=sys.stderr)
-                current_model_index += 1
-                continue # 进入下一次重试，但会用新的模型索引
-
-            print(f"  使用模型: {active_model_name} (尝试 {attempt + 1}/{args.retries})")
-            
-            try:
-                # 调用链，结果直接是Pydantic对象
-                response_object = chain.invoke({
-                    "title": d['title'],
-                    "content": d['summary'],
-                    "language": language
-                })
-                
-                if response_object and is_response_valid(response_object):
-                    final_result = response_object.model_dump()
-                    print(f"  > 尝试成功", file=sys.stderr)
-                    break # 当前论文处理成功，跳出重试循环
-            
-            except langchain_core.exceptions.OutputParserException as e:
-                print(f"  > 输出解析失败: {e}", file=sys.stderr)
-            except google_exceptions.ResourceExhausted as e:
-                print(f"  ! 模型 {active_model_name} 配额耗尽。错误: {e}", file=sys.stderr)
-                current_model_index += 1 # 永久切换到下一个模型
-                # 不用等下一次重试，直接用新模型再试一次
+                print(f"  跳过: <{task['key_name']}> - {task['model_name']} 未成功初始化。", file=sys.stderr)
                 continue
-            except Exception as e:
-                print(f"  > 发生未知错误: {e}", file=sys.stderr)
-            
-            if final_result:
-                break # 如果成功了，确保跳出循环
 
-            # 如果不是最后一次尝试，则等待
-            if attempt < args.retries - 1:
-                time.sleep(args.timeout)
+            # 内层循环对当前任务进行重试
+            for attempt in range(args.retries):
+                print(f"  使用: <{task['key_name']}> - {task['model_name']} (尝试 {attempt + 1}/{args.retries})", file=sys.stderr)
+                try:
+                    response_object = chain.invoke({
+                        "title": d['title'],
+                        "content": d['summary'],
+                        "language": language
+                    })
+                    if response_object and is_response_valid(response_object):
+                        final_result = response_object.model_dump()
+                        print(f"  > 尝试成功", file=sys.stderr)
+                        break  # 成功，跳出内层重试循环
+
+                except google_exceptions.ResourceExhausted as e:
+                    print(f"  ! 配额耗尽: <{task['key_name']}> - {task['model_name']}。将切换到下一个任务...", file=sys.stderr)
+                    break # 配额耗尽，跳出内层重试循环，让外层循环执行下一个任务
+
+                except Exception as e:
+                    print(f"  > 发生错误: {e}", file=sys.stderr)
+                    if attempt < args.retries - 1:
+                        print(f"  > 准备下一次尝试...", file=sys.stderr)
+                        time.sleep(args.timeout)
+            
+            # 如果内层循环成功获得了结果，则无需再尝试级联计划中的下一个任务
+            if final_result:
+                break
         
         if not final_result:
             total_failures += 1
-            print(f"  处理 {d['id']} 失败。", file=sys.stderr)
+            print(f"  处理 {d['id']} 失败。所有级联任务均已尝试失败。", file=sys.stderr)
             error_message = "错误：AI分析失败。"
             d['AI'] = {field: error_message for field in Structure.model_fields.keys()}
         else:
             d['AI'] = final_result
             
         enhanced_data.append(d)
-        time.sleep(6) # 友好地降低请求频率
+        time.sleep(6)
 
-    # 构造输出文件名并写入结果
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
     with open(output_filename, "w", encoding="utf-8") as f:
         for d_item in enhanced_data:
