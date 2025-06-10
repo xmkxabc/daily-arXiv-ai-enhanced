@@ -18,7 +18,7 @@
 
 **Method:** {method}
 
-**Result:** {result}
+**Result:** {results}
 
 **Conclusion:** {conclusion}
 
