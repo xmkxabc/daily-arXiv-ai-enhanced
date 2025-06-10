@@ -182,7 +182,7 @@ def main():
             d['AI'] = final_result
             
         enhanced_data.append(d)
-        time.sleep(2) # 友好地降低请求频率
+        time.sleep(6) # 友好地降低请求频率
 
     # 构造输出文件名并写入结果
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
