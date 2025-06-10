@@ -126,7 +126,7 @@ def main():
             replacement_data = {
                 "idx": next(paper_idx_counter),
                 "title": item.get("title", "N/A"),
-                "url": item.get('url', '#'),
+                "url": item.get('url', '#').replace('arxiv.org/pdf/', 'arxiv.org/abs/'),
                 "authors": item.get("authors", "N/A"),
                 "abstract": item.get("abstract", "N/A"),
                 "comment": item.get("comment", "None"),
