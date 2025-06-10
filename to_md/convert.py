@@ -55,29 +55,36 @@ def main():
     """
     args = parse_arguments()
     
-    # --- 核心修正: 直接使用从命令行传入的参数 ---
+    # --- 核心修正: 参数依然从命令行获取，但移除了主模板的依赖 ---
     input_file = args.input
     paper_template_file = args.template
     output_file = args.output
-    # 主模板文件路径固定，因为脚本从根目录运行
-    main_template_file = 'template.md'
-    
-    # 从输出文件名中提取日期
+    # --- 修改点 1: 移除硬编码的主模板文件路径 ---
+    # main_template_file = 'template.md' # <- 已移除
+
+    # 从输出文件名中提取日期 (这个逻辑可以保留，因为它比V1更灵活)
     match = re.search(r'(\d{4}-\d{2}-\d{2})', output_file)
     if not match:
-        # 如果从输出文件找不到，尝试从输入文件找
         match = re.search(r'(\d{4}-\d{2}-\d{2})', input_file)
         if not match:
-            print(f"错误: 无法从输入或输出文件名中提取日期: '{input_file}', '{output_file}'", file=sys.stderr)
-            sys.exit(1)
-    date_str = match.group(1)
+            print(f"警告: 无法从文件名中提取日期，将使用今天的日期。", file=sys.stdout)
+            # 如果提取失败，回退到使用当前日期，让程序更健壮
+            from datetime import datetime
+            date_str = datetime.now().strftime('%Y-%m-%d')
+        else:
+            date_str = match.group(1)
+    else:
+        date_str = match.group(1)
 
-    main_template = load_template(main_template_file)
+    # --- 修改点 2: 不再加载主模板 ---
+    # main_template = load_template(main_template_file) # <- 已移除
     data = load_jsonl_data(input_file)
 
     if data is None:
-        final_content = main_template.replace('{date}', date_str)
-        final_content = final_content.replace('{content}', f"### 今日没有找到新论文。\n\n> 输入文件 '{input_file}' 未找到或为空。")
+        # --- 修改点 3: 当没有数据时，直接在代码中构建输出内容 ---
+        final_content = f"# ArXiv Daily Papers - {date_str}\n\n"
+        final_content += f"### 今日没有找到新论文。\n\n> 输入文件 '{input_file}' 未找到或为空。"
+        
         with open(output_file, "w", encoding='utf-8') as f:
             f.write(final_content)
         print(f"成功生成报告 (无新论文或输入文件丢失): {output_file}")
@@ -122,11 +129,11 @@ def main():
                 "url": item.get('url', '#'),
                 "authors": item.get("authors", "N/A"),
                 "abstract": item.get("abstract", "N/A"),
-                "comment": item.get("comment", ""), # 这是来自 arXiv 的原始备注
+                "comment": item.get("comment", ""),
                 "title_translation": ai_data.get('title_translation', ''),
                 "keywords": ai_data.get('keywords', ''),
                 "abstract_translation": ai_data.get('abstract_translation', ''),
-                "ai_comment": ai_data.get('comment', '') # 这是 AI 生成的备注
+                "ai_comment": ai_data.get('comment', '')
             }
             
             temp_paper_content = paper_template
@@ -137,13 +144,13 @@ def main():
         full_category_block = category_header + "\n\n" + "\n\n---\n\n".join(papers_in_category_list)
         category_content_blocks.append(full_category_block)
 
+    # --- 修改点 4: 直接在代码中组装最终的完整内容 ---
     final_toc = "\n".join(toc_parts)
     all_papers_content = "\n\n".join(category_content_blocks)
     
-    final_paper_content = f"{final_toc}\n\n{all_papers_content}"
-    
-    final_content = main_template.replace('{date}', date_str)
-    final_content = final_content.replace('{content}', final_paper_content)
+    # 构建完整的 Markdown 页面
+    report_title = f"# ArXiv Daily Papers - {date_str}\n\n"
+    final_content = report_title + final_toc + "\n\n" + all_papers_content
 
     with open(output_file, "w", encoding='utf-8') as f:
         f.write(final_content)
