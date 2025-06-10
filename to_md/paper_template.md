@@ -22,8 +22,8 @@
 
 **Conclusion:** {conclusion}
 
-> **ai_Abstract:** {ai_summary}
+> **ai_Abstract:** {ai_Abstract}
 
-> **摘要翻译:** {translation}
+> **摘要翻译:** {abstract_translation}
 
 </details>

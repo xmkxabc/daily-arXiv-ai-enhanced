@@ -11,7 +11,7 @@ class Structure(BaseModel):
     method: Optional[str] = Field(default=None, description="method of this paper")
     result: Optional[str] = Field(default=None, description="result of this paper")
     conclusion: Optional[str] = Field(default=None, description="conclusion of this paper")
-    translation: Optional[str] = Field(default=None, description="translate the paper to Chinese")
+    translation: Optional[str] = Field(default=None, description="translate the abstract to Chinese")
     summary: Optional[str] = Field(default=None, description="generate a new, concise summary of the paper based on its abstract")
     keywords: Optional[str] = Field(default=None, description="Extract 3 to 5 keywords from the abstract, separated by commas.")
     # **新增**: AI点评字段
