@@ -50,16 +50,14 @@ def main():
     """主函数，生成Markdown报告。"""
     args = parse_arguments()
     
-    # 动态从输出文件名中提取日期
     date_match = re.search(r'(\d{4}-\d{2}-\d{2})', args.output)
     date_str = date_match.group(1) if date_match else datetime.now().strftime('%Y-%m-%d')
 
     data = load_jsonl_data(args.input)
     paper_template = load_template(args.template)
 
-    # 如果没有数据，生成一个提示性的空文件
     if not data:
-        final_content = f"# ArXiv Daily Papers - {date_str}\n\n"
+        final_content = f"# AI-Enhanced arXiv Daily {date_str}\n\n"
         final_content += "### 今日没有找到新论文。\n"
         with open(args.output, "w", encoding='utf-8') as f:
             f.write(final_content)
@@ -82,66 +80,57 @@ def main():
     sorted_categories = sorted(papers_by_category.keys(), key=rank)
 
     # --- Markdown 内容生成 ---
-    # 1. 生成TOC (目录)
-    toc_parts = [f"## 今日总计: {len(data)} 篇论文", "### 目录"]
-    for cate in sorted_categories:
-        slug = slugify(cate) # 使用健壮的锚点
-        toc_parts.append(f"- [{cate}](#{slug}) ({len(papers_by_category[cate])} 篇)")
-    
-    # 2. 生成每篇论文的内容
-    paper_content_blocks = []
+    # 1. 预先渲染所有论文卡片
+    rendered_papers = {}
     for idx, paper in enumerate(data):
         ai_data = paper.get('AI', {})
         primary_category = (paper.get("categories") or [paper.get("cate")])[0] or "Uncategorized"
         
-        # 准备一个包含所有可用数据的字典
         context = {
             "idx": idx + 1,
             "id": paper.get("id", "N/A"),
             "title": paper.get("title", "N/A"),
             "authors": ", ".join(paper.get("authors", ["N/A"])),
-            "abstract": paper.get("summary", "N/A"), # 原文摘要
-            "comment": paper.get("comment", "无"), # 作者备注
+            "abstract": paper.get("summary", "N/A"),
+            "comment": paper.get("comment", "无"),
             "cate": primary_category,
             "url": f"https://arxiv.org/abs/{paper.get('id', '')}",
-            
-            # AI 生成的数据
             "title_translation": ai_data.get('title_translation', 'N/A'),
             "keywords": ai_data.get('keywords', 'N/A'),
             "tldr": ai_data.get('tldr', 'N/A'),
-            "comments": ai_data.get('comments', 'N/A'), # AI点评
+            "comments": ai_data.get('comments', 'N/A'),
             "motivation": ai_data.get('motivation', 'N/A'),
             "method": ai_data.get('method', 'N/A'),
-            "result": ai_data.get('result', 'N/A'), # 修正: 使用 result
+            "result": ai_data.get('result', 'N/A'),
             "conclusion": ai_data.get('conclusion', 'N/A'),
-            "summary": ai_data.get('summary', 'N/A'), # AI生成的新摘要
-            "translation": ai_data.get('translation', 'N/A'), # 摘要翻译
+            "summary": ai_data.get('summary', 'N/A'),
+            "translation": ai_data.get('translation', 'N/A'),
         }
         
-        # 填充模板
         temp_paper_content = paper_template
         for key, value in context.items():
             temp_paper_content = temp_paper_content.replace(f"{{{key}}}", str(value))
-        
-        paper_content_blocks.append(temp_paper_content)
+        rendered_papers[paper.get("id")] = temp_paper_content
 
+    # 2. 生成TOC (目录)
+    toc_parts = [f"## 今日总计: {len(data)} 篇论文", "### 目录"]
+    for cate in sorted_categories:
+        slug = slugify(cate)
+        toc_parts.append(f"- [{cate}](#{slug}) ({len(papers_by_category[cate])} 篇)")
+    
     # 3. 按分类组装最终内容
     content_by_category_str = ""
     for cate in sorted_categories:
         slug = slugify(cate)
-        content_by_category_str += f"<a id='{slug}'></a>\n## {cate}\n\n" # 为TOC创建锚点
+        # 为每个分类标题添加锚点和返回总目录的链接
+        content_by_category_str += f"<a id='{slug}'></a>\n## {cate}  [⬆️ 返回目录](#toc)\n\n"
         
-        category_papers = [p for p in data if (p.get("categories") or [p.get("cate")])[0] == cate]
-        
-        for i, paper_data in enumerate(category_papers):
-            # 找到已经渲染好的内容块
-            # 这是一个简单的查找，对于大规模数据可以优化
-            for block in paper_content_blocks:
-                 if f"https://arxiv.org/abs/{paper_data.get('id', 'N/A')}" in block:
-                    content_by_category_str += block
-                    # 新增: 在每篇论文后添加分隔符和返回顶部链接
-                    content_by_category_str += "\n[⬆️ 返回目录](#toc)\n\n---\n\n"
-                    break
+        for paper_data in papers_by_category[cate]:
+            paper_id = paper_data.get("id")
+            if paper_id in rendered_papers:
+                content_by_category_str += rendered_papers[paper_id]
+                # **新增功能**: 在每篇论文后添加分层导航链接
+                content_by_category_str += f"\n[⬆️ 返回分类顶部](#{slug}) | [⬆️ 返回总目录](#toc)\n\n---\n\n"
 
     # 4. 组装最终的完整Markdown页面
     report_title = f"# AI-Enhanced arXiv Daily {date_str}\n\n"
@@ -157,4 +146,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
