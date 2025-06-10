@@ -26,6 +26,7 @@ jobs:
           uv pip install google-generativeai
 
       - name: Run Data Processing Pipeline
+        id: run_scripts
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           LANGUAGE: ${{ vars.LANGUAGE }}
@@ -69,15 +70,15 @@ jobs:
       #注释   
       - name: Set Current Date
         id: date
-        run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+        run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
       
       #注释 
       - name: Create or Update Daily Digest Issue
         uses: peter-evans/create-issue-from-file@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # **修正**: 从上一步的环境变量中获取日期
-          title: "每日速报 (Daily Digest): ${{ env.TODAY_DATE }}"
+          # **修正**: 从上一步的输出中获取日期
+          title: "每日速报 (Daily Digest): ${{ steps.date.outputs.TODAY_DATE }}"
           content-filepath: "${{ steps.run_scripts.outputs.report_path }}"
           labels: daily-digest, automated
       
