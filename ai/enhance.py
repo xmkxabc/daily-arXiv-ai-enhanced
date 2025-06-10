@@ -1,151 +1,130 @@
-import argparse
-from datetime import datetime
-import json
 import os
+import json
 import sys
+import dotenv
+import argparse
 import time
-from pathlib import Path
-import google.generativeai as genai
+import langchain_core.exceptions
+from langchain_google_genai import ChatGoogleGenerativeAI
+from google.api_core import exceptions as google_exceptions
+from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
+from structure import Structure
+
+if os.path.exists('.env'):
+    dotenv.load_dotenv()
+script_dir = os.path.dirname(os.path.abspath(__file__))
+try:
+    with open(os.path.join(script_dir, "template.txt"), "r", encoding="utf-8") as f:
+        template = f.read()
+    with open(os.path.join(script_dir, "system.txt"), "r", encoding="utf-8") as f:
+        system = f.read()
+except FileNotFoundError as e:
+    print(f"错误：找不到必需的模板文件: {e}。搜索路径: {script_dir}", file=sys.stderr)
+    sys.exit(1)
 
 def parse_args():
-    """解析命令行参数"""
-    parser = argparse.ArgumentParser(description="使用Google Gemini API增强ArXiv论文数据。")
-    parser.add_argument("--data", type=str, required=True, help="输入的JSONL文件路径。")
+    parser = argparse.ArgumentParser(description="使用AI摘要增强arXiv数据。")
+    parser.add_argument("--data", type=str, required=True, help="要处理的JSONL数据文件。")
+    parser.add_argument("--retries", type=int, default=3, help="对每篇论文的最大重试次数。")
+    parser.add_argument("--timeout", type=int, default=1, help="重试之间的等待秒数。")
     return parser.parse_args()
 
-def load_papers(filepath):
-    """从JSONL文件加载论文数据，并去除重复项。"""
-    if not os.path.exists(filepath):
-        print(f"警告: 文件 {filepath} 不存在。")
-        return []
-    
-    papers = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        for line in f:
-            try:
-                paper = json.loads(line)
-                papers[paper['id']] = paper
-            except json.JSONDecodeError:
-                print(f"警告: 无法解析行: {line.strip()}")
-    
-    unique_papers = list(papers.values())
-    print(f"从 {filepath} 加载了 {len(unique_papers)} 篇不重复的论文")
-    return unique_papers
-
-def get_model(api_key, model_name, fallback_models_str):
-    """获取生成模型，如果主模型不可用，则尝试备用模型。"""
-    genai.configure(api_key=api_key)
-    models_to_try = [model_name] + [m.strip() for m in fallback_models_str.split(',') if m.strip()]
-    
-    for name in models_to_try:
-        try:
-            model = genai.GenerativeModel(name)
-            print(f"模型已设置: {name}")
-            return model
-        except Exception as e:
-            print(f"警告: 无法加载模型 {name}: {e}")
-    
-    sys.exit("错误: 所有指定模型均无法加载。请检查模型名称和API密钥。")
-
-def call_gemini_with_json_mode(model, prompt, retries=3, delay=5):
-    """使用JSON模式调用Gemini API，强制输出包含所有字段的结构化数据。"""
-    # --- 关键修正: 定义包含所有新字段的完整JSON输出格式 ---
-    json_schema = {
-        "type": "object",
-        "properties": {
-            "title_translation": {"type": "string", "description": "论文标题的中文翻译"},
-            "abstract_translation": {"type": "string", "description": "论文摘要的详细中文翻译，忠于原文"},
-            "keywords": {"type": "string", "description": "5到7个中文关键词，用逗号分隔"},
-            "tldr": {"type": "string", "description": "用一句话总结这篇论文的核心贡献 (TL;DR)"},
-            "motivation": {"type": "string", "description": "论文的研究动机或要解决的问题"},
-            "method": {"type": "string", "description": "论文提出的主要方法或技术"},
-            "result": {"type": "string", "description": "论文取得的主要成果或实验结果"},
-            "conclusion": {"type": "string", "description": "论文得出的主要结论"},
-            "ai_summary": {"type": "string", "description": "对论文内容的全面中文总结"},
-            "ai_comment": {"type": "string", "description": "对论文的简短中文评论，评价其创新性或意义"}
-        },
-        "required": [
-            "title_translation", "abstract_translation", "keywords", "tldr",
-            "motivation", "method", "result", "conclusion",
-            "ai_summary", "ai_comment"
-        ]
-    }
-    
-    generation_config = genai.GenerationConfig(
-        response_mime_type="application/json",
-        response_schema=json_schema
-    )
-
-    for attempt in range(retries):
-        try:
-            print(f"  > 第 {attempt + 1} 次尝试...", end='')
-            response = model.generate_content(prompt, generation_config=generation_config)
-            parsed_json = json.loads(response.text)
-            
-            if all(key in parsed_json for key in json_schema["required"]):
-                print("成功")
-                return parsed_json
-            else:
-                print("失败 (返回的JSON缺少字段)。")
-
-        except Exception as e:
-            print(f"失败 (API错误: {e})。")
-        
-        if attempt < retries - 1:
-            time.sleep(delay)
-            
-    return None
+def is_response_valid(result):
+    if not result: return False
+    all_fields = Structure.model_fields.keys()
+    for field in all_fields:
+        if result.get(field) is None or not str(result.get(field)).strip():
+            return False
+    return True
 
 def main():
     args = parse_args()
-    
+    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-preview-0520')
+    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-flash-preview-0417,gemini-1.0-flash-001")
+    model_list = [primary_model_name] + [name.strip() for name in fallback_models_str.split(',') if name.strip()] if fallback_models_str else [primary_model_name]
+    language = os.environ.get("LANGUAGE", 'Chinese') 
     api_key = os.environ.get("GOOGLE_API_KEY")
-    language = os.environ.get("LANGUAGE", "Chinese")
-    model_name = os.environ.get("MODEL_NAME", "gemini-1.5-flash-latest") # 使用最新模型以提高成功率
-    fallback_models = os.environ.get("FALLBACK_MODELS", "gemini-2.0-flash")
-
     if not api_key:
-        sys.exit("错误: GOOGLE_API_KEY 环境变量未设置。")
-
-    papers = load_papers(args.data)
-    if not papers:
-        output_filename = f"data/{datetime.now().strftime('%Y-%m-%d')}_AI_enhanced_{language}.jsonl"
-        Path(output_filename).touch()
-        print("没有论文需要处理，已创建空输出文件。")
-        return
+        print("错误: 找不到 GOOGLE_API_KEY。", file=sys.stderr)
+        sys.exit(1)
 
     try:
-        system_prompt = Path('ai/system.txt').read_text(encoding='utf-8')
-        user_template = Path('ai/template.txt').read_text(encoding='utf-8')
-    except FileNotFoundError as e:
-        sys.exit(f"错误: 无法找到模板文件: {e}")
+        with open(args.data, "r", encoding="utf-8") as f:
+            data = [json.loads(line) for line in f if line.strip()]
+    except Exception as e:
+        print(f"错误: 处理文件 {args.data} 时出错: {e}", file=sys.stderr)
+        return
 
-    model = get_model(api_key, model_name, fallback_models)
-    enhanced_papers = []
-    total = len(papers)
-    success_count = 0
+    seen_ids = set()
+    unique_data = [d for d in data if d.get('id') not in seen_ids and not seen_ids.add(d['id'])]
+    print(f"从 {args.data} 加载了 {len(unique_data)} 篇不重复的论文", file=sys.stderr)
+    data = unique_data
 
-    output_filename = os.path.basename(args.data).replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
-    output_path = os.path.join('data', output_filename)
+    prompt_template = ChatPromptTemplate.from_messages([SystemMessagePromptTemplate.from_template(system), HumanMessagePromptTemplate.from_template(template)])
+    output_parser = PydanticToolsParser(tools=[Structure])
+    model_chains = {}
+    for model_name in model_list:
+        try:
+            llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
+            chain = prompt_template | llm.bind_tools([Structure]) | output_parser
+            model_chains[model_name] = chain
+            print(f"模型已设置: {model_name}", file=sys.stderr)
+        except Exception as e:
+            print(f"警告：无法初始化模型 {model_name}。错误：{e}", file=sys.stderr)
 
-    for i, paper in enumerate(papers):
-        print(f"正在处理 {i + 1}/{total}: {paper.get('id', 'N/A')}")
-        paper_info = f"Title: {paper.get('title', '')}\nAuthors: {paper.get('authors', '')}\nAbstract: {paper.get('abstract', '')}"
-        prompt = f"{system_prompt}\n\n{user_template}\n\n{paper_info}"
-        ai_data = call_gemini_with_json_mode(model, prompt)
+    enhanced_data = []
+    total_failures = 0
+    current_model_index = 0
 
-        if ai_data:
-            paper['AI'] = ai_data
-            enhanced_papers.append(paper)
-            success_count += 1
+    for idx, d in enumerate(data):
+        print(f"正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
+        final_result = None
+        current_model_name = model_list[current_model_index]
+        print(f"  使用当前模型: {current_model_name}")
+        chain = model_chains.get(current_model_name)
+        if not chain:
+            print(f"  错误：当前模型 {current_model_name} 未成功初始化，跳过。", file=sys.stderr)
         else:
-            print(f"  处理 {paper.get('id', 'N/A')} 失败。")
+            for attempt in range(args.retries):
+                try:
+                    response_data_list = chain.invoke({"title": d['title'], "content": d['summary'], "language": language})
+                    if response_data_list:
+                        result = response_data_list[0].model_dump()
+                        if is_response_valid(result):
+                            final_result = result
+                            print(f"  > 第 {attempt + 1} 次尝试成功", file=sys.stderr)
+                            break
+                        else:
+                            print(f"  > 第 {attempt + 1} 次尝试验证失败 (存在空字段)。", file=sys.stderr)
+                    else:
+                        print(f"  > 第 {attempt + 1} 次尝试失败 (模型未返回结构化数据)。", file=sys.stderr)
+                except google_exceptions.ResourceExhausted as e:
+                    print(f"  ! 模型 {current_model_name} 调用次数已耗尽。", file=sys.stderr)
+                    if current_model_index < len(model_list) - 1:
+                        current_model_index += 1
+                        print(f"  ! 永久切换到下一个模型: {model_list[current_model_index]}", file=sys.stderr)
+                    else:
+                        print("  ! 所有模型均已耗尽。", file=sys.stderr)
+                    break 
+                except Exception as e:
+                    print(f"  > 第 {attempt + 1} 次尝试出错: {e}", file=sys.stderr)
+                if attempt < args.retries - 1:
+                    time.sleep(args.timeout)
+        if not final_result:
+            total_failures += 1
+            print(f"  处理 {d['id']} 失败。", file=sys.stderr)
+            d['AI'] = {"title_translation": "错误：AI分析失败。", "tldr": None, "motivation": None, "method": None, "result": None, "conclusion": None, "translation": None, "summary": None, "comments": None, "keywords": None}
+        else:
+            d['AI'] = final_result
+        enhanced_data.append(d)
+        time.sleep(6)
 
-    with open(output_path, 'w', encoding='utf-8') as f:
-        for paper in enhanced_papers:
-            f.write(json.dumps(paper, ensure_ascii=False) + '\n')
-
-    print(f"处理完成。成功处理: {success_count}/{total}。输出文件: {output_path}")
+    output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
+    with open(output_filename, "w", encoding="utf-8") as f:
+        for d_item in enhanced_data:
+            f.write(json.dumps(d_item, ensure_ascii=False) + "\n")
+    print(f"\n处理完成。成功处理: {len(enhanced_data) - total_failures}/{len(enhanced_data)}。输出文件: {output_filename}")
 
 if __name__ == "__main__":
     main()
