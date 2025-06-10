@@ -132,13 +132,14 @@ def main():
                 "comment": item.get("comment", ""),
                 "title_translation": ai_data.get('title_translation', ''),
                 "keywords": ai_data.get('keywords', ''),
-                "abstract_translation": ai_data.get('abstract_translation', ''),
+                "abstract_translation": ai_data.get('translation', ''),
                 "ai_comment": ai_data.get('comments', ''),
                 "motivation": ai_data.get('motivation', ''),
                 "method": ai_data.get('method', ''),
                 "results": ai_data.get('results', ''),
                 "conclusion": ai_data.get('conclusion', ''),
                 "ai_Abstract": ai_data.get('summary', ''),
+                "tldr": ai_data.get('tldr', ''),
             }
             
             temp_paper_content = paper_template
