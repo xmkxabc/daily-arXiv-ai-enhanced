@@ -4,6 +4,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from datetime import datetime
 import google.generativeai as genai
 
 def parse_args():
