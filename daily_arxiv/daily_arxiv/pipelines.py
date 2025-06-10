@@ -28,7 +28,8 @@ class ArxivPipeline:
                 item["comment"] = result.comment
                 item["cate"] = result.primary_category
                 # 使用PDF链接作为URL，更直接
-                item["url"] = result.pdf_url
+                # item["url"] = result.pdf_url
+                item["url"] = f"https://arxiv.org/abs/{result.entry_id}" # 使用entry_id作为URL
                 return item
             else:
                 raise DropItem(f"Paper with ID {item['id']} not found on arXiv.")
