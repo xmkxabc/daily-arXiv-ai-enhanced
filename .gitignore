@@ -11,3 +11,6 @@ wheels/
 ai/.env
 test/*
 .idea/
+
+# 数据文件
+docs/database.json
