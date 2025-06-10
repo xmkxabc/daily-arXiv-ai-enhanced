@@ -41,9 +41,9 @@ def load_template(file_path):
 
 def slugify(text):
     """为TOC创建健壮的、GitHub兼容的锚点链接。"""
-    text = text.lower()
-    text = re.sub(r'[^\w\s-]', '', text) # 移除无效字符
-    text = re.sub(r'[\s]+', '-', text)   # 用连字符替换空格
+    text = str(text).lower()
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s]+', '-', text)
     return text
 
 def main():
@@ -86,30 +86,36 @@ def main():
         ai_data = paper.get('AI', {})
         primary_category = (paper.get("categories") or [paper.get("cate")])[0] or "Uncategorized"
         
+        # **核心修正**: 调整context字典的键名，以精确匹配paper_template.md中的占位符
         context = {
             "idx": idx + 1,
             "id": paper.get("id", "N/A"),
             "title": paper.get("title", "N/A"),
             "authors": ", ".join(paper.get("authors", ["N/A"])),
-            "abstract": paper.get("summary", "N/A"),
-            "comment": paper.get("comment", "无"),
+            "comment": paper.get("comment", "无"), # 作者备注
             "cate": primary_category,
             "url": f"https://arxiv.org/abs/{paper.get('id', '')}",
+            
+            # AI 数据
             "title_translation": ai_data.get('title_translation', 'N/A'),
             "keywords": ai_data.get('keywords', 'N/A'),
             "tldr": ai_data.get('tldr', 'N/A'),
-            "comments": ai_data.get('comments', 'N/A'),
             "motivation": ai_data.get('motivation', 'N/A'),
             "method": ai_data.get('method', 'N/A'),
-            "result": ai_data.get('result', 'N/A'),
             "conclusion": ai_data.get('conclusion', 'N/A'),
-            "summary": ai_data.get('summary', 'N/A'),
-            "translation": ai_data.get('translation', 'N/A'),
+
+            # --- 已修正以下键名以匹配模板 ---
+            "ai_comment": ai_data.get('comments', 'N/A'),      # 模板需要 {ai_comment}
+            "results": ai_data.get('result', 'N/A'),           # 模板需要 {results}
+            "ai_Abstract": ai_data.get('summary', 'N/A'),      # 模板需要 {ai_Abstract}
+            "abstract_translation": ai_data.get('translation', 'N/A'), # 模板需要 {abstract_translation}
         }
         
+        # 填充模板
         temp_paper_content = paper_template
         for key, value in context.items():
-            temp_paper_content = temp_paper_content.replace(f"{{{key}}}", str(value))
+            # 使用 str(value or '') 确保即使值为None也能安全替换为空字符串
+            temp_paper_content = temp_paper_content.replace(f"{{{key}}}", str(value or ''))
         rendered_papers[paper.get("id")] = temp_paper_content
 
     # 2. 生成TOC (目录)
@@ -122,14 +128,12 @@ def main():
     content_by_category_str = ""
     for cate in sorted_categories:
         slug = slugify(cate)
-        # 为每个分类标题添加锚点和返回总目录的链接
         content_by_category_str += f"<a id='{slug}'></a>\n## {cate}  [⬆️ 返回目录](#toc)\n\n"
         
         for paper_data in papers_by_category[cate]:
             paper_id = paper_data.get("id")
             if paper_id in rendered_papers:
                 content_by_category_str += rendered_papers[paper_id]
-                # **新增功能**: 在每篇论文后添加分层导航链接
                 content_by_category_str += f"\n[⬆️ 返回分类顶部](#{slug}) | [⬆️ 返回总目录](#toc)\n\n---\n\n"
 
     # 4. 组装最终的完整Markdown页面
@@ -137,7 +141,7 @@ def main():
     toc_anchor = "<a id='toc'></a>\n"
     final_toc = "\n".join(toc_parts) + "\n\n---\n"
     
-    final_content = report_title + toc_anchor + final_toc + content_by_category_str
+    final_content = report_title + toc_anchor + final_toc + content_by_category_str.strip().removesuffix('---')
 
     with open(args.output, "w", encoding='utf-8') as f:
         f.write(final_content)
