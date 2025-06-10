@@ -97,11 +97,17 @@ def main():
     # 这会告诉LLM如何格式化输出以匹配Structure模型
     human_template = template_content + "\n\n{format_instructions}\n"
     
-    prompt_template = ChatPromptTemplate.from_messages([
+    # **修复 TypeError 的改动点**
+    # 先创建 PromptTemplate
+    prompt = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
         HumanMessagePromptTemplate.from_template(human_template)
-    ], partial_variables={"format_instructions": output_parser.get_format_instructions()})
-
+    ])
+    
+    # 再使用 .partial() 方法注入部分变量，这种方法向后兼容性更好
+    prompt_template = prompt.partial(
+        format_instructions=output_parser.get_format_instructions()
+    )
 
     # 初始化模型和链
     model_chains = {}
