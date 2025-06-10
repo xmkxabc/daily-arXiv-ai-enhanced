@@ -13,17 +13,18 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
-from langchain_core.output_parsers.openai_tools import PydanticToolsParser
+# **优化点 1: 导入更稳定、更适合此场景的 PydanticOutputParser**
+from langchain_core.output_parsers import PydanticOutputParser
 from structure import Structure
 
 if os.path.exists('.env'):
     dotenv.load_dotenv()
 
-# --- 文件加载 ---
+# --- 文件加载 (保持不变) ---
 script_dir = os.path.dirname(os.path.abspath(__file__))
 try:
     with open(os.path.join(script_dir, "template.txt"), "r", encoding="utf-8") as f:
-        template = f.read()
+        template_content = f.read()
     with open(os.path.join(script_dir, "system.txt"), "r", encoding="utf-8") as f:
         system = f.read()
 except FileNotFoundError as e:
@@ -32,25 +33,28 @@ except FileNotFoundError as e:
 
 
 def parse_args():
-    """解析命令行参数。"""
+    """解析命令行参数。(保持不变)"""
     parser = argparse.ArgumentParser(description="使用AI摘要增强arXiv数据。")
     parser.add_argument("--data", type=str, required=True, help="要处理的JSONL数据文件。")
     parser.add_argument("--retries", type=int, default=3, help="对每篇论文的最大重试次数。")
     parser.add_argument("--timeout", type=int, default=1, help="重试之间的等待秒数。")
     return parser.parse_args()
 
-def is_response_valid(result):
+def is_response_valid(result: Structure):
     """
     终极验证：检查所有字段都必须存在且为非空字符串。
+    参数类型现在是 Structure 对象。
     """
     if not result:
         return False
     
+    # 将 Pydantic 对象转为字典进行验证
+    result_dict = result.model_dump()
     all_fields = Structure.model_fields.keys()
 
     for field in all_fields:
-        value = result.get(field)
-        if value is None or not str(value).strip():
+        value = result_dict.get(field)
+        if value is None or (isinstance(value, str) and not value.strip()):
             return False
             
     return True
@@ -59,12 +63,12 @@ def main():
     """主函数，运行增强过程。"""
     args = parse_args()
     
-    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-2.5-flash-preview-05-20')
-    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-04-17,gemini-2.0-flash-001,gemini-2.0-flash-lite")
+    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-latest')
+    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-pro-latest,gemini-1.0-pro")
     
     model_list = [primary_model_name]
     if fallback_models_str:
-        model_list.extend([name.strip() for name in fallback_models_str.split(',')])
+        model_list.extend([name.strip() for name in fallback_models_str.split(',') if name.strip()])
 
     language = os.environ.get("LANGUAGE", 'Chinese') 
 
@@ -76,34 +80,36 @@ def main():
     try:
         with open(args.data, "r", encoding="utf-8") as f:
             data = [json.loads(line) for line in f if line.strip()]
-    except FileNotFoundError:
-        print(f"错误: 在 {args.data} 找不到数据文件", file=sys.stderr)
-        return
-    except json.JSONDecodeError as e:
-        print(f"错误: JSON解码失败 {args.data} - {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"错误: 处理文件 {args.data} 时出错: {e}", file=sys.stderr)
         return
 
-    # 数据去重
+    # 数据去重 (保持不变)
     seen_ids = set()
-    unique_data = []
-    for item in data:
-        if item.get('id') not in seen_ids:
-            seen_ids.add(item['id'])
-            unique_data.append(item)
+    unique_data = [item for item in data if item.get('id') not in seen_ids and not seen_ids.add(item['id'])]
     data = unique_data
     print(f"从 {args.data} 加载了 {len(data)} 篇不重复的论文", file=sys.stderr)
 
+    # **优化点 2: 设置 PydanticOutputParser**
+    output_parser = PydanticOutputParser(pydantic_object=Structure)
+
+    # **优化点 3: 将格式化指令注入到提示模板中**
+    # 这会告诉LLM如何格式化输出以匹配Structure模型
+    human_template = template_content + "\n\n{format_instructions}\n"
+    
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
-        HumanMessagePromptTemplate.from_template(template)
-    ])
-    output_parser = PydanticToolsParser(tools=[Structure])
+        HumanMessagePromptTemplate.from_template(human_template)
+    ], partial_variables={"format_instructions": output_parser.get_format_instructions()})
 
+
+    # 初始化模型和链
     model_chains = {}
     for model_name in model_list:
         try:
             llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
-            chain = prompt_template | llm.bind_tools([Structure]) | output_parser
+            # **优化点 4: 构建新的、更稳定的链，移除 .bind_tools()**
+            chain = prompt_template | llm | output_parser
             model_chains[model_name] = chain
             print(f"模型已设置: {model_name}", file=sys.stderr)
         except Exception as e:
@@ -127,22 +133,19 @@ def main():
         else:
             for attempt in range(args.retries):
                 try:
-                    # **核心改动**: 将标题也传递给AI
-                    response_data_list = chain.invoke({
+                    response_object = chain.invoke({
                         "title": d['title'],
                         "content": d['summary'],
                         "language": language
                     })
-                    if response_data_list:
-                        result = response_data_list[0].model_dump()
-                        if is_response_valid(result):
-                            final_result = result
-                            print(f"  > 第 {attempt + 1} 次尝试成功", file=sys.stderr)
-                            break
-                        else:
-                            print(f"  > 第 {attempt + 1} 次尝试验证失败 (存在空字段)。", file=sys.stderr)
+                    
+                    if response_object and is_response_valid(response_object):
+                        final_result = response_object.model_dump() # 从Pydantic对象获取字典
+                        print(f"  > 第 {attempt + 1} 次尝试成功", file=sys.stderr)
+                        break
                     else:
-                        print(f"  > 第 {attempt + 1} 次尝试失败 (模型未返回结构化数据)。", file=sys.stderr)
+                        print(f"  > 第 {attempt + 1} 次尝试返回数据无效或验证失败。", file=sys.stderr)
+
                 except google_exceptions.ResourceExhausted as e:
                     print(f"  ! 模型 {current_model_name} 调用次数已耗尽。错误: {e}", file=sys.stderr)
                     if current_model_index < len(model_list) - 1:
@@ -160,16 +163,12 @@ def main():
         if not final_result:
             total_failures += 1
             print(f"  处理 {d['id']} 失败。", file=sys.stderr)
-            d['AI'] = {
-                "title_translation": "错误：AI分析失败。", "tldr": None, "motivation": None, "method": None,
-                "result": None, "conclusion": None, "translation": None, "summary": None,
-                "comments": None, "keywords": None
-            }
+            d['AI'] = {"title_translation": "错误：AI分析失败."} # 简化错误信息
         else:
             d['AI'] = final_result
             
         enhanced_data.append(d)
-        time.sleep(6)
+        time.sleep(2) # 降低请求频率
 
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
     with open(output_filename, "w", encoding="utf-8") as f:
