@@ -88,12 +88,7 @@ def main():
         else:
             for attempt in range(args.retries):
                 try:
-                    # **核心修正**: 在调用AI时，同时传递 'title' 和 'content' (摘要)
-                    response_data_list = chain.invoke({
-                        "title": d.get('title', ''), 
-                        "content": d.get('summary', ''), 
-                        "language": language
-                    })
+                    response_data_list = chain.invoke({"title": d['title'], "content": d['summary'], "language": language})
                     if response_data_list:
                         result = response_data_list[0].model_dump()
                         if is_response_valid(result):
