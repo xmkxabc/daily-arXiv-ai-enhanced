@@ -129,7 +129,7 @@ def main():
                 "url": item.get('url', '#'),
                 "authors": item.get("authors", "N/A"),
                 "abstract": item.get("abstract", "N/A"),
-                "comment": item.get("comment", ""),
+                "comment": item.get("comment", "None"),
                 "title_translation": ai_data.get('title_translation', ''),
                 "keywords": ai_data.get('keywords', ''),
                 "abstract_translation": ai_data.get('translation', ''),
@@ -140,6 +140,7 @@ def main():
                 "conclusion": ai_data.get('conclusion', ''),
                 "ai_Abstract": ai_data.get('summary', ''),
                 "tldr": ai_data.get('tldr', ''),
+                "conclusion": ai_data.get('conclusion', ''),
             }
             
             temp_paper_content = paper_template
