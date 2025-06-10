@@ -1,10 +1,10 @@
 import argparse
+from datetime import datetime
 import json
 import os
 import sys
 import time
 from pathlib import Path
-from datetime import datetime
 import google.generativeai as genai
 
 def parse_args():
@@ -48,22 +48,29 @@ def get_model(api_key, model_name, fallback_models_str):
     sys.exit("错误: 所有指定模型均无法加载。请检查模型名称和API密钥。")
 
 def call_gemini_with_json_mode(model, prompt, retries=3, delay=5):
-    """
-    使用JSON模式调用Gemini API，强制输出结构化数据。
-    """
-    # --- 关键修正: 定义期望的JSON输出格式 ---
+    """使用JSON模式调用Gemini API，强制输出包含所有字段的结构化数据。"""
+    # --- 关键修正: 定义包含所有新字段的完整JSON输出格式 ---
     json_schema = {
         "type": "object",
         "properties": {
             "title_translation": {"type": "string", "description": "论文标题的中文翻译"},
-            "keywords": {"type": "string", "description": "5个中文关键词，用逗号分隔"},
-            "abstract_translation": {"type": "string", "description": "论文摘要的中文翻译"},
-            "comment": {"type": "string", "description": "对论文的简短中文评论或总结"}
+            "abstract_translation": {"type": "string", "description": "论文摘要的详细中文翻译，忠于原文"},
+            "keywords": {"type": "string", "description": "5到7个中文关键词，用逗号分隔"},
+            "tldr": {"type": "string", "description": "用一句话总结这篇论文的核心贡献 (TL;DR)"},
+            "motivation": {"type": "string", "description": "论文的研究动机或要解决的问题"},
+            "method": {"type": "string", "description": "论文提出的主要方法或技术"},
+            "result": {"type": "string", "description": "论文取得的主要成果或实验结果"},
+            "conclusion": {"type": "string", "description": "论文得出的主要结论"},
+            "ai_summary": {"type": "string", "description": "对论文内容的全面中文总结"},
+            "ai_comment": {"type": "string", "description": "对论文的简短中文评论，评价其创新性或意义"}
         },
-        "required": ["title_translation", "keywords", "abstract_translation", "comment"]
+        "required": [
+            "title_translation", "abstract_translation", "keywords", "tldr",
+            "motivation", "method", "result", "conclusion",
+            "ai_summary", "ai_comment"
+        ]
     }
-
-    # --- 关键修正: 配置模型以使用JSON模式 ---
+    
     generation_config = genai.GenerationConfig(
         response_mime_type="application/json",
         response_schema=json_schema
@@ -73,12 +80,9 @@ def call_gemini_with_json_mode(model, prompt, retries=3, delay=5):
         try:
             print(f"  > 第 {attempt + 1} 次尝试...", end='')
             response = model.generate_content(prompt, generation_config=generation_config)
-            
-            # 在JSON模式下，响应直接是JSON字符串
             parsed_json = json.loads(response.text)
             
-            # 验证返回的JSON是否包含所有必需的字段
-            if all(key in parsed_json and parsed_json[key] for key in json_schema["required"]):
+            if all(key in parsed_json for key in json_schema["required"]):
                 print("成功")
                 return parsed_json
             else:
@@ -95,35 +99,28 @@ def call_gemini_with_json_mode(model, prompt, retries=3, delay=5):
 def main():
     args = parse_args()
     
-    # 从环境变量加载配置
     api_key = os.environ.get("GOOGLE_API_KEY")
     language = os.environ.get("LANGUAGE", "Chinese")
-    model_name = os.environ.get("MODEL_NAME", "gemini-2.0-flash")
-    fallback_models = os.environ.get("FALLBACK_MODELS", "gemini-2.5-flash-preview-04-17,gemini-2.0-flash-001,gemini-2.0-flash-lite")
+    model_name = os.environ.get("MODEL_NAME", "gemini-1.5-flash-latest") # 使用最新模型以提高成功率
+    fallback_models = os.environ.get("FALLBACK_MODELS", "gemini-2.0-flash")
 
     if not api_key:
         sys.exit("错误: GOOGLE_API_KEY 环境变量未设置。")
 
-    # 加载数据和模板
     papers = load_papers(args.data)
     if not papers:
-        # 如果没有论文，创建一个空的输出文件并退出
         output_filename = f"data/{datetime.now().strftime('%Y-%m-%d')}_AI_enhanced_{language}.jsonl"
         Path(output_filename).touch()
         print("没有论文需要处理，已创建空输出文件。")
         return
 
-    # 加载系统和用户提示模板
     try:
         system_prompt = Path('ai/system.txt').read_text(encoding='utf-8')
         user_template = Path('ai/template.txt').read_text(encoding='utf-8')
     except FileNotFoundError as e:
         sys.exit(f"错误: 无法找到模板文件: {e}")
 
-    # 获取模型
     model = get_model(api_key, model_name, fallback_models)
-
-    # 处理每篇论文
     enhanced_papers = []
     total = len(papers)
     success_count = 0
@@ -133,12 +130,8 @@ def main():
 
     for i, paper in enumerate(papers):
         print(f"正在处理 {i + 1}/{total}: {paper.get('id', 'N/A')}")
-        
-        # 构建提示
         paper_info = f"Title: {paper.get('title', '')}\nAuthors: {paper.get('authors', '')}\nAbstract: {paper.get('abstract', '')}"
         prompt = f"{system_prompt}\n\n{user_template}\n\n{paper_info}"
-
-        # 调用API
         ai_data = call_gemini_with_json_mode(model, prompt)
 
         if ai_data:
@@ -148,7 +141,6 @@ def main():
         else:
             print(f"  处理 {paper.get('id', 'N/A')} 失败。")
 
-    # 将结果写入新的JSONL文件
     with open(output_path, 'w', encoding='utf-8') as f:
         for paper in enhanced_papers:
             f.write(json.dumps(paper, ensure_ascii=False) + '\n')
