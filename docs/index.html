@@ -100,7 +100,6 @@
                 
                 <!-- **已升级**: 骨架屏加载 -->
                 <div id="skeleton-loader" class="space-y-6">
-                    <!-- 骨架屏卡片 -->
                     <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg animate-pulse">
                         <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
                         <div class="h-6 bg-gray-300 dark:bg-gray-600 rounded w-full mb-3"></div>
@@ -134,14 +133,15 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
     </button>
     
-    <!-- GitHub Buttons Script -->
     <script async defer src="https://buttons.github.io/buttons.js"></script>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        let allPapers = [], filteredPapers = [], allCategories = new Set(), categoryCounts = {}, activeCategories = new Set(), currentPage = 1, currentSort = 'date_desc';
+        // --- 状态管理 ---
+        let allPapers = [], filteredPapers = [], categoryCounts = {}, activeCategories = new Set(), currentPage = 1, currentSort = 'date_desc';
         const papersPerPage = 10;
         
+        // --- DOM 引用 ---
         const searchInput = document.getElementById('search-input');
         const sortSelect = document.getElementById('sort-select');
         const papersList = document.getElementById('papers-list');
@@ -164,19 +164,25 @@
 
         // --- 设置 ---
         const setupTheme = () => {
-            const updateTheme = () => {
+            const updateThemeIcons = () => {
                 const isDark = document.documentElement.classList.contains('dark');
                 lightIcon.style.display = isDark ? 'block' : 'none';
                 darkIcon.style.display = isDark ? 'none' : 'block';
             };
+            
+            // 初始加载时设置主题
             if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
             }
-            updateTheme();
+            updateThemeIcons();
+            
+            // 监听点击事件
             themeToggleBtn.addEventListener('click', () => {
                 const isDark = document.documentElement.classList.toggle('dark');
                 localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
-                updateTheme();
+                updateThemeIcons();
             });
         };
         
@@ -201,6 +207,12 @@
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             });
+            categoryFiltersAccordion.addEventListener('click', (e) => {
+                const target = e.target.closest('.category-filter-btn');
+                if (target) {
+                    toggleCategoryFilter(target.dataset.category);
+                }
+            });
         };
 
         // --- 数据处理 ---
@@ -219,15 +231,16 @@
                     if (primaryCategory) {
                         const prefix = primaryCategory.split('.')[0];
                         const group = groupMapping[prefix] || "Other";
-                        if (!categoriesByGroup[group].includes(primaryCategory)) {
+                        if (categoriesByGroup[group] && !categoriesByGroup[group].includes(primaryCategory)) {
                             categoriesByGroup[group].push(primaryCategory);
                         }
                         counts[primaryCategory] = (counts[primaryCategory] || 0) + 1;
                     }
                 });
                 categoryCounts = counts;
-                renderCategoryFilters(categoriesByGroup);
                 
+                skeletonLoader.style.display = 'none';
+                renderCategoryFilters(categoriesByGroup);
                 applyFiltersAndSort();
             } catch (error) {
                 skeletonLoader.innerHTML = `<p class="text-red-500 text-center">加载数据失败: ${error.message}</p>`;
@@ -236,35 +249,34 @@
 
         // --- 渲染 ---
         const render = () => {
-            skeletonLoader.classList.add('hidden');
-            papersList.innerHTML = '';
-            emptyState.classList.toggle('hidden', filteredPapers.length > 0);
-            
-            if (allPapers.length > 0 && filteredPapers.length < allPapers.length) {
-                resultsSummary.textContent = `找到 ${filteredPapers.length} 篇相关结果。`;
-                resultsSummary.classList.remove('hidden');
-            } else {
-                resultsSummary.classList.add('hidden');
-            }
+            papersList.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+            setTimeout(() => {
+                papersList.innerHTML = '';
+                emptyState.classList.toggle('hidden', filteredPapers.length > 0);
+                
+                if (allPapers.length > 0 && filteredPapers.length < allPapers.length) {
+                    resultsSummary.textContent = `找到 ${filteredPapers.length} 篇相关结果。`;
+                    resultsSummary.classList.remove('hidden');
+                } else {
+                    resultsSummary.classList.add('hidden');
+                }
 
-            if (filteredPapers.length === 0) {
-                paginationContainer.innerHTML = '';
-                return;
-            }
-            
-            const startIndex = (currentPage - 1) * papersPerPage;
-            const papersToRender = filteredPapers.slice(startIndex, startIndex + papersPerPage);
+                if (filteredPapers.length === 0) {
+                    paginationContainer.innerHTML = '';
+                    papersList.classList.remove('opacity-0');
+                    return;
+                }
+                
+                const startIndex = (currentPage - 1) * papersPerPage;
+                const papersToRender = filteredPapers.slice(startIndex, startIndex + papersPerPage);
 
-            const fragment = document.createDocumentFragment();
-            papersToRender.forEach(paper => fragment.appendChild(createPaperCard(paper)));
-            papersList.appendChild(fragment);
-            // Animate new cards
-            Array.from(papersList.children).forEach((child, index) => {
-                child.classList.add('paper-card-enter');
-                child.style.animationDelay = `${index * 50}ms`;
-            });
+                const fragment = document.createDocumentFragment();
+                papersToRender.forEach(paper => fragment.appendChild(createPaperCard(paper)));
+                papersList.appendChild(fragment);
 
-            renderPagination();
+                renderPagination();
+                papersList.classList.remove('opacity-0');
+            }, 300);
         };
         
         const createPaperCard = (paper) => {
@@ -282,7 +294,7 @@
         
         const renderCategoryFilters = (groups) => {
             const fragment = document.createDocumentFragment();
-            for (const groupName in groups) {
+            Object.keys(groups).sort().forEach(groupName => {
                 if (groups[groupName].length > 0) {
                     const details = document.createElement('details');
                     details.className = 'details-arrow border-b border-gray-200 dark:border-gray-700 py-2';
@@ -304,16 +316,55 @@
                     details.appendChild(list);
                     fragment.appendChild(details);
                 }
-            }
-            categoryFiltersAccordion.appendChild(fragment);
-            categoryFiltersAccordion.addEventListener('click', (e) => {
-                const target = e.target.closest('.category-filter-btn');
-                if (target) toggleCategoryFilter(target.dataset.category);
             });
+            categoryFiltersAccordion.appendChild(fragment);
         };
 
-        const renderPagination = () => { /* ... (Pagination logic is unchanged) ... */ };
-        function getPaginationPages(currentPage, totalPages, width = 2) { /* ... */ };
+        const renderPagination = () => {
+            paginationContainer.innerHTML = '';
+            const totalPages = Math.ceil(filteredPapers.length / papersPerPage);
+            if (totalPages <= 1) return;
+
+            const createButton = (text, onClick, disabled = false, isCurrent = false) => {
+                const button = document.createElement('button');
+                button.textContent = text;
+                button.disabled = disabled;
+                button.className = `px-3 py-1 mx-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed ${isCurrent ? 'bg-indigo-500 text-white dark:bg-indigo-600' : 'bg-white dark:bg-gray-800'}`;
+                button.onclick = onClick;
+                return button;
+            };
+
+            paginationContainer.appendChild(createButton('«', () => { currentPage--; applyFiltersAndSort(); }, currentPage === 1));
+            const pages = getPaginationPages(currentPage, totalPages);
+            pages.forEach(pageNum => {
+                if (pageNum === '...') {
+                    const dots = document.createElement('span');
+                    dots.textContent = '...';
+                    dots.className = 'px-3 py-1 mx-1';
+                    paginationContainer.appendChild(dots);
+                } else {
+                    paginationContainer.appendChild(createButton(pageNum, () => { currentPage = pageNum; render(); }, false, currentPage === pageNum));
+                }
+            });
+            paginationContainer.appendChild(createButton('»', () => { currentPage++; applyFiltersAndSort(); }, currentPage === totalPages));
+        };
+        
+        const getPaginationPages = (currentPage, totalPages, width = 2) => {
+            if (totalPages <= (width * 2 + 3)) return [...Array(totalPages).keys()].map(i => i + 1);
+            const pages = new Set([1, totalPages]);
+            for (let i = Math.max(2, currentPage - width); i <= Math.min(totalPages - 1, currentPage + width); i++) {
+                pages.add(i);
+            }
+            const result = [...pages].sort((a, b) => a - b);
+            const withDots = [];
+            let last = 0;
+            for (const page of result) {
+                if (page - last > 1) withDots.push('...');
+                withDots.push(page);
+                last = page;
+            }
+            return withDots;
+        };
 
         // --- 过滤/排序 ---
         const applyFiltersAndSort = () => {
@@ -321,7 +372,9 @@
             const searchTerm = searchInput.value.toLowerCase().trim();
 
             if (searchTerm) {
-                sortSelect.value = 'relevance';
+                if (sortSelect.value !== 'relevance') {
+                    sortSelect.value = 'relevance';
+                }
                 currentSort = 'relevance';
                 tempPapers = tempPapers.map(paper => {
                     const title = (paper.title || '').toLowerCase();
