@@ -31,7 +31,6 @@ def parse_args():
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="使用AI摘要增强arXiv数据。")
     parser.add_argument("--data", type=str, required=True, help="要处理的JSONL数据文件。")
-    # **语义已恢复**: retries是针对每个模型/密钥组合的重试次数。
     parser.add_argument("--retries", type=int, default=3, help="对每个模型任务的最大重试次数。")
     parser.add_argument("--timeout", type=int, default=1, help="失败尝试之间的等待秒数。")
     return parser.parse_args()
@@ -80,6 +79,13 @@ def main():
     if not cascade_plan:
         print("错误: 找不到任何可用的API密钥来构建调用计划。", file=sys.stderr)
         sys.exit(1)
+        
+    # **新增**: 启动时打印调用计划以供调试
+    print("--- 调用计划已构建 ---", file=sys.stderr)
+    for i, task in enumerate(cascade_plan):
+        print(f"  优先级 {i+1}: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
+    print("----------------------", file=sys.stderr)
+
 
     language = os.environ.get("LANGUAGE", 'Chinese')
 
@@ -117,22 +123,27 @@ def main():
 
     enhanced_data = []
     total_failures = 0
+    
+    # **核心修复**: 引入状态变量来跟踪当前应该使用的任务索引
+    current_task_index = 0
 
     for idx, d in enumerate(data):
         print(f"\n正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
         final_result = None
         
-        # --- **新逻辑**: 经典重试与级联 ---
-        # 外层循环遍历级联计划
-        for task in cascade_plan:
+        # --- **新逻辑**: 使用索引来驱动级联计划 ---
+        # 这个循环现在只负责为当前论文找到一个可用的模型并获取结果
+        while current_task_index < len(cascade_plan):
+            task = cascade_plan[current_task_index]
             key = (task["api_key"], task["model_name"])
             chain = model_chains.get(key)
-            
+
             if not chain:
-                print(f"  跳过: <{task['key_name']}> - {task['model_name']} 未成功初始化。", file=sys.stderr)
+                print(f"  ! 跳过已失败的任务: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
+                current_task_index += 1 # 永久切换到下一个任务
                 continue
 
-            # 内层循环对当前任务进行重试
+            # 对当前选定的任务进行重试
             for attempt in range(args.retries):
                 print(f"  使用: <{task['key_name']}> - {task['model_name']} (尝试 {attempt + 1}/{args.retries})", file=sys.stderr)
                 try:
@@ -143,32 +154,35 @@ def main():
                     })
                     if response_object and is_response_valid(response_object):
                         final_result = response_object.model_dump()
-                        print(f"  > 尝试成功", file=sys.stderr)
-                        break  # 成功，跳出内层重试循环
+                        print("  > 尝试成功", file=sys.stderr)
+                        break # 成功，跳出重试循环
 
                 except google_exceptions.ResourceExhausted as e:
-                    print(f"  ! 配额耗尽: <{task['key_name']}> - {task['model_name']}。将切换到下一个任务...", file=sys.stderr)
-                    break # 配额耗尽，跳出内层重试循环，让外层循环执行下一个任务
+                    print(f"  ! 配额耗尽: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
+                    # **核心修复**: 增加任务索引，以确保下一个循环从新任务开始
+                    current_task_index += 1
+                    # 跳出重试循环，让外层while循环决定下一步
+                    break 
 
                 except Exception as e:
                     print(f"  > 发生错误: {e}", file=sys.stderr)
                     if attempt < args.retries - 1:
-                        print(f"  > 准备下一次尝试...", file=sys.stderr)
                         time.sleep(args.timeout)
             
-            # 如果内层循环成功获得了结果，则无需再尝试级联计划中的下一个任务
-            if final_result:
+            # 如果成功，或因配额耗尽需要切换任务，都应结束当前论文的处理
+            if final_result or "ResourceExhausted" in locals().get('e', Exception).__class__.__name__:
                 break
         
         if not final_result:
             total_failures += 1
-            print(f"  处理 {d['id']} 失败。所有级联任务均已尝试失败。", file=sys.stderr)
+            print(f"  处理 {d['id']} 失败。所有可用任务均已尝试失败。", file=sys.stderr)
             error_message = "错误：AI分析失败。"
             d['AI'] = {field: error_message for field in Structure.model_fields.keys()}
         else:
             d['AI'] = final_result
             
         enhanced_data.append(d)
+        # 即使处理失败，也保持延时，避免在快速失败时对API造成冲击
         time.sleep(6)
 
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
