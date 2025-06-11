@@ -52,7 +52,6 @@
         .dark .horizontal-scrollbar::-webkit-scrollbar-thumb {
             background-color: #4a5568;
         }
-        /* **新增**: 返回顶部按钮的样式 */
         #back-to-top-btn {
             transition: opacity 0.3s, transform 0.3s;
         }
@@ -110,7 +109,6 @@
         </footer>
     </div>
 
-    <!-- **新增**: 浮动的“返回顶部”按钮 -->
     <button id="back-to-top-btn" class="hidden fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full shadow-lg z-20">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
@@ -139,30 +137,33 @@
             const themeToggleBtn = document.getElementById('theme-toggle');
             const darkIcon = document.getElementById('theme-toggle-dark-icon');
             const lightIcon = document.getElementById('theme-toggle-light-icon');
-
-            // **新增**: 获取返回顶部按钮的引用
             const backToTopBtn = document.getElementById('back-to-top-btn');
 
-            if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-                lightIcon.classList.remove('hidden');
-            } else {
-                document.documentElement.classList.remove('dark');
-                darkIcon.classList.remove('hidden');
-            }
-            
-            themeToggleBtn.addEventListener('click', () => {
-                darkIcon.classList.toggle('hidden');
-                lightIcon.classList.toggle('hidden');
-                document.documentElement.classList.toggle('dark');
-                if (document.documentElement.classList.contains('dark')) {
-                    localStorage.setItem('color-theme', 'dark');
+            // --- 主题切换 ---
+            // **已修复**: 简化并修复了主题切换逻辑
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    lightIcon.classList.remove('hidden');
+                    darkIcon.classList.add('hidden');
                 } else {
-                    localStorage.setItem('color-theme', 'light');
+                    document.documentElement.classList.remove('dark');
+                    darkIcon.classList.remove('hidden');
+                    lightIcon.classList.add('hidden');
                 }
+            };
+            
+            // 初始化主题
+            const savedTheme = localStorage.getItem('color-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(savedTheme);
+
+            themeToggleBtn.addEventListener('click', () => {
+                const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                localStorage.setItem('color-theme', newTheme);
+                applyTheme(newTheme);
             });
 
-            // **新增**: 处理返回顶部按钮的逻辑
+            // --- 返回顶部 ---
             window.addEventListener('scroll', () => {
                 if (window.scrollY > 300) {
                     backToTopBtn.classList.remove('hidden', 'opacity-0', 'scale-90');
@@ -170,7 +171,6 @@
                 } else {
                     backToTopBtn.classList.remove('opacity-100', 'scale-100');
                     backToTopBtn.classList.add('opacity-0', 'scale-90');
-                    // 使用setTimeout确保动画完成后再隐藏
                     setTimeout(() => {
                          if (window.scrollY <= 300) {
                              backToTopBtn.classList.add('hidden');
@@ -180,13 +180,10 @@
             });
 
             backToTopBtn.addEventListener('click', () => {
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             });
 
-
+            // --- 数据获取 ---
             async function fetchData() {
                 try {
                     const response = await fetch('database.json');
@@ -207,6 +204,7 @@
                 }
             }
 
+            // --- 渲染逻辑 ---
             function render() {
                 papersList.innerHTML = '';
                 emptyState.classList.toggle('hidden', filteredPapers.length > 0);
@@ -233,7 +231,8 @@
                 const aiData = paper.AI || {};
                 const authors = Array.isArray(paper.authors) ? paper.authors.join(', ') : 'N/A';
                 const keywords = aiData.keywords || 'N/A';
-                const originalComment = paper.comment;
+                // **已修复**: 为空评论提供默认值 "None"
+                const originalComment = paper.comment?.trim() || 'None';
                 const aiComment = aiData.comments || 'N/A';
                 const primaryCategory = paper.categories?.[0] || paper.cate || 'N/A';
                 
@@ -243,16 +242,6 @@
                     temp.textContent = str;
                     return temp.innerHTML;
                 };
-
-                let originalCommentHTML = '';
-                if (originalComment && originalComment.trim()) {
-                    originalCommentHTML = `
-                        <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border-l-4 border-blue-400 dark:border-blue-500">
-                            <p class="font-semibold text-sm text-blue-800 dark:text-blue-300">作者备注:</p>
-                            <p class="text-sm text-blue-700 dark:text-blue-200">${sanitize(originalComment)}</p>
-                        </div>
-                    `;
-                }
 
                 const card = document.createElement('div');
                 card.className = 'bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-[1.02]';
@@ -264,17 +253,19 @@
                             ${sanitize(aiData.title_translation || '暂无标题翻译。')}
                         </p>
                         
-                        <div class="flex justify-between items-start text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            <p class="flex-grow mr-4">${sanitize(authors)}</p>
-                            // <p class="flex-shrink-0 font-medium">Main category: ${sanitize(primaryCategory)}</p>
-                        </div>
+                        <!-- **已修复**: 移除重复的 "Main category" 字段 -->
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${sanitize(authors)}</p>
 
                         <div class="mb-4">
                             <span class="font-semibold">关键词:</span>
                             <span class="text-indigo-600 dark:text-indigo-400">${sanitize(keywords)}</span>
                         </div>
                         
-                        ${originalCommentHTML}
+                        <!-- **已修复**: 即使评论为空也显示区块，内容为"None" -->
+                        <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border-l-4 border-blue-400 dark:border-blue-500">
+                            <p class="font-semibold text-sm text-blue-800 dark:text-blue-300">作者备注:</p>
+                            <p class="text-sm text-blue-700 dark:text-blue-200">${sanitize(originalComment)}</p>
+                        </div>
 
                         <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-lg mb-4 border-l-4 border-amber-400 dark:border-amber-500">
                              <p class="font-semibold mb-1 text-amber-800 dark:text-amber-300">AI 点评:</p>
@@ -294,7 +285,6 @@
                                 <div><h4 class="font-semibold text-lg mb-2">AI生成的摘要</h4><p>${sanitize(aiData.summary || 'N/A')}</p></div>
                                 <div><h4 class="font-semibold text-lg mb-2">研究动机</h4><p>${sanitize(aiData.motivation || 'N/A')}</p></div>
                                 <div><h4 class="font-semibold text-lg mb-2">研究方法</h4><p>${sanitize(aiData.method || 'N/A')}</p></div>
-                                <!-- **已新增**: 显示 Result 和 Conclusion -->
                                 <div><h4 class="font-semibold text-lg mb-2">研究成果</h4><p>${sanitize(aiData.result || 'N/A')}</p></div>
                                 <div><h4 class="font-semibold text-lg mb-2">研究结论</h4><p>${sanitize(aiData.conclusion || 'N/A')}</p></div>
                                 <div><h4 class="font-semibold text-lg mb-2">摘要翻译</h4><p>${sanitize(aiData.translation || 'N/A')}</p></div>
