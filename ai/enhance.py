@@ -7,6 +7,7 @@ import time
 
 import langchain_core.exceptions
 from langchain_google_genai import ChatGoogleGenerativeAI
+# **新增**: 明确导入需要的异常类型
 from google.api_core import exceptions as google_exceptions
 from langchain.prompts import ChatPromptTemplate
 from structure import Structure
@@ -80,7 +81,6 @@ def main():
         print("错误: 找不到任何可用的API密钥来构建调用计划。", file=sys.stderr)
         sys.exit(1)
         
-    # **新增**: 启动时打印调用计划以供调试
     print("--- 调用计划已构建 ---", file=sys.stderr)
     for i, task in enumerate(cascade_plan):
         print(f"  优先级 {i+1}: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
@@ -124,15 +124,12 @@ def main():
     enhanced_data = []
     total_failures = 0
     
-    # **核心修复**: 引入状态变量来跟踪当前应该使用的任务索引
     current_task_index = 0
 
     for idx, d in enumerate(data):
         print(f"\n正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
         final_result = None
         
-        # --- **新逻辑**: 使用索引来驱动级联计划 ---
-        # 这个循环现在只负责为当前论文找到一个可用的模型并获取结果
         while current_task_index < len(cascade_plan):
             task = cascade_plan[current_task_index]
             key = (task["api_key"], task["model_name"])
@@ -140,10 +137,9 @@ def main():
 
             if not chain:
                 print(f"  ! 跳过已失败的任务: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
-                current_task_index += 1 # 永久切换到下一个任务
+                current_task_index += 1
                 continue
 
-            # 对当前选定的任务进行重试
             for attempt in range(args.retries):
                 print(f"  使用: <{task['key_name']}> - {task['model_name']} (尝试 {attempt + 1}/{args.retries})", file=sys.stderr)
                 try:
@@ -155,22 +151,23 @@ def main():
                     if response_object and is_response_valid(response_object):
                         final_result = response_object.model_dump()
                         print("  > 尝试成功", file=sys.stderr)
-                        break # 成功，跳出重试循环
+                        break 
 
-                except google_exceptions.ResourceExhausted as e:
-                    print(f"  ! 配额耗尽: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
-                    # **核心修复**: 增加任务索引，以确保下一个循环从新任务开始
+                # **核心升级**: 将 NotFound 和 ResourceExhausted 视为同类永久性错误
+                except (google_exceptions.ResourceExhausted, google_exceptions.NotFound) as e:
+                    error_type = "配额耗尽" if isinstance(e, google_exceptions.ResourceExhausted) else "模型未找到"
+                    print(f"  ! {error_type}: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
+                    # 永久切换到下一个任务
                     current_task_index += 1
                     # 跳出重试循环，让外层while循环决定下一步
                     break 
 
                 except Exception as e:
-                    print(f"  > 发生错误: {e}", file=sys.stderr)
+                    print(f"  > 发生瞬时性错误: {e}", file=sys.stderr)
                     if attempt < args.retries - 1:
                         time.sleep(args.timeout)
             
-            # 如果成功，或因配额耗尽需要切换任务，都应结束当前论文的处理
-            if final_result or "ResourceExhausted" in locals().get('e', Exception).__class__.__name__:
+            if final_result:
                 break
         
         if not final_result:
@@ -182,7 +179,6 @@ def main():
             d['AI'] = final_result
             
         enhanced_data.append(d)
-        # 即使处理失败，也保持延时，避免在快速失败时对API造成冲击
         time.sleep(6)
 
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
