@@ -140,27 +140,31 @@
             const backToTopBtn = document.getElementById('back-to-top-btn');
 
             // --- 主题切换 ---
-            // **已修复**: 简化并修复了主题切换逻辑
-            const applyTheme = (theme) => {
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                    lightIcon.classList.remove('hidden');
-                    darkIcon.classList.add('hidden');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                    darkIcon.classList.remove('hidden');
-                    lightIcon.classList.add('hidden');
-                }
-            };
-            
-            // 初始化主题
-            const savedTheme = localStorage.getItem('color-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            applyTheme(savedTheme);
+            // **已修复**: 采用最直接、最健壮的逻辑
+            // 1. 初始化页面加载时的状态
+            if (localStorage.getItem('color-theme') === 'dark' || 
+               (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                lightIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkIcon.classList.remove('hidden');
+            }
 
+            // 2. 监听点击事件
             themeToggleBtn.addEventListener('click', () => {
-                const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-                localStorage.setItem('color-theme', newTheme);
-                applyTheme(newTheme);
+                // 直接切换图标的显示/隐藏
+                darkIcon.classList.toggle('hidden');
+                lightIcon.classList.toggle('hidden');
+
+                // 切换主题并更新localStorage
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
             });
 
             // --- 返回顶部 ---
