@@ -11,251 +11,213 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f9fafb; /* bg-gray-50 */
         }
-        .dark body {
-            background-color: #111827; /* dark:bg-gray-900 */
+        .details-arrow::-webkit-details-marker {
+            display: none;
         }
-        .details-arrow summary { list-style: none; }
-        .details-arrow summary::-webkit-details-marker { display: none; }
-        .details-arrow summary::after {
-            content: '›';
+        .details-arrow > summary {
+            list-style: none;
+        }
+        .details-arrow > summary::after {
+            content: '+';
             font-size: 1.5rem;
+            line-height: 1;
+            margin-left: 0.5rem;
             transition: transform 0.2s;
             float: right;
-            transform: rotate(90deg);
+            font-weight: 400;
         }
-        .details-arrow[open] summary::after {
-            transform: rotate(-90deg);
+        .details-arrow[open] > summary::after {
+            transform: rotate(45deg);
         }
-        .paper-card-enter {
-            animation: fadeIn 0.5s ease-in-out;
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .horizontal-scrollbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #a0aec0;
+            border-radius: 20px;
+        }
+        .dark .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #4a5568;
         }
         #back-to-top-btn {
             transition: opacity 0.3s, transform 0.3s;
         }
     </style>
 </head>
-<body class="text-gray-800 dark:text-gray-200 transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
 
-    <!-- **已升级**: 紧凑型粘性页眉 -->
-    <header class="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <!-- 左侧：标题 -->
-                <div class="flex items-center space-x-4">
-                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">AI arXiv Daily</h1>
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">AI增强的arXiv每日速报</h1>
+            <p class="mt-4 text-lg text-gray-600 dark:text-gray-400">由AI分析和翻译的每日arXiv论文摘要。</p>
+            <div class="absolute top-4 right-4">
+                <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                    <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 003.636 6.464l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1zM6.464 16.364l.707-.707a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="sticky top-0 z-10 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm py-4 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="relative md:col-span-2">
+                    <input type="text" id="search-input" placeholder="按标题、作者或关键词搜索..." class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                 </div>
-
-                <!-- 右侧：控件 -->
-                <div class="flex items-center space-x-2 md:space-x-4">
-                    <!-- **新增**: GitHub 按钮 -->
-                    <div class="hidden md:flex items-center space-x-2">
-                        <!-- 请将 'xmkxabc/daae' 替换为您的 GitHub 仓库路径 -->
-                        <a class="github-button" href="https://github.com/xmkxabc/daae" data-icon="octicon-star" data-show-count="true" aria-label="Star xmkxabc/daae on GitHub">Star</a>
-                        <a class="github-button" href="https://github.com/xmkxabc/daae/fork" data-icon="octicon-repo-forked" data-show-count="true" aria-label="Fork xmkxabc/daae on GitHub">Fork</a>
-                    </div>
-                    
-                    <div class="relative flex-shrink-0">
-                        <input type="text" id="search-input" placeholder="搜索..." class="w-32 md:w-48 pl-8 pr-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 focus:w-48 md:focus:w-64">
-                        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    </div>
-
-                    <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
-                        <svg id="theme-toggle-dark-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                        <svg id="theme-toggle-light-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 003.636 6.464l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1zM6.464 16.364l.707-.707a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414z"></path></svg>
-                    </button>
+                <div class="relative">
+                     <select id="sort-select" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                         <option value="date_desc">按最新日期排序</option>
+                         <option value="relevance">按相关性排序</option>
+                     </select>
+                    <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                    </svg>
                 </div>
             </div>
+            <div id="category-filters" class="mt-4 flex flex-nowrap gap-3 items-center overflow-x-auto pb-3 horizontal-scrollbar">
+            </div>
         </div>
-    </header>
 
-    <div class="container mx-auto px-4 py-8">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <!-- 左侧：筛选和排序 -->
-            <aside class="md:col-span-1">
-                <div class="sticky top-24 space-y-6">
-                    <div>
-                        <label for="sort-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">排序方式</label>
-                        <select id="sort-select" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                             <option value="date_desc">按最新日期</option>
-                             <option value="relevance">按相关性</option>
-                        </select>
-                    </div>
-                    <!-- **已升级**: 分组与折叠的分类筛选器 -->
-                    <div id="category-filters-accordion">
-                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">按分类筛选</h3>
-                        <!-- 分类手风琴将动态插入此处 -->
-                    </div>
-                </div>
-            </aside>
-            
-            <!-- 右侧：主内容 -->
-            <main class="md:col-span-3">
-                <div id="results-summary" class="mb-4 text-gray-600 dark:text-gray-400 hidden"></div>
-                
-                <!-- **已升级**: 骨架屏加载 -->
-                <div id="skeleton-loader" class="space-y-6">
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg animate-pulse">
-                        <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-                        <div class="h-6 bg-gray-300 dark:bg-gray-600 rounded w-full mb-3"></div>
-                        <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-6"></div>
-                        <div class="flex space-x-2">
-                           <div class="h-5 bg-gray-300 dark:bg-gray-700 rounded-full w-20"></div>
-                           <div class="h-5 bg-gray-300 dark:bg-gray-700 rounded-full w-24"></div>
-                        </div>
-                    </div>
-                     <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg animate-pulse">
-                        <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-                        <div class="h-6 bg-gray-300 dark:bg-gray-600 rounded w-full mb-3"></div>
-                        <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-6"></div>
-                        <div class="flex space-x-2">
-                           <div class="h-5 bg-gray-300 dark:bg-gray-700 rounded-full w-20"></div>
-                           <div class="h-5 bg-gray-300 dark:bg-gray-700 rounded-full w-24"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="papers-list" class="grid grid-cols-1 gap-6"></div>
-                <div id="empty-state" class="text-center py-16 hidden">
-                    <p class="text-lg text-gray-500">找不到结果，请尝试调整您的搜索或过滤器。</p>
-                </div>
-                <footer id="pagination" class="flex justify-center items-center gap-2 mt-8"></footer>
-            </main>
-        </div>
+        <main>
+            <div id="loading-state" class="text-center py-16">
+                <p class="text-lg text-gray-500">正在加载论文...</p>
+            </div>
+            <div id="results-summary" class="text-center mb-6 text-gray-600 dark:text-gray-400 hidden"></div>
+            <div id="papers-list" class="grid grid-cols-1 gap-6">
+            </div>
+            <div id="empty-state" class="text-center py-16 hidden">
+                <p class="text-lg text-gray-500">找不到结果，请尝试调整您的搜索或过滤器。</p>
+            </div>
+        </main>
+        
+        <footer id="pagination" class="flex justify-center items-center gap-2 mt-12">
+        </footer>
     </div>
 
     <button id="back-to-top-btn" class="hidden fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full shadow-lg z-20">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+        </svg>
     </button>
-    
-    <script async defer src="https://buttons.github.io/buttons.js"></script>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- 状态管理 ---
-        let allPapers = [], filteredPapers = [], categoryCounts = {}, activeCategories = new Set(), currentPage = 1, currentSort = 'date_desc';
-        const papersPerPage = 10;
-        
-        // --- DOM 引用 ---
-        const searchInput = document.getElementById('search-input');
-        const sortSelect = document.getElementById('sort-select');
-        const papersList = document.getElementById('papers-list');
-        const paginationContainer = document.getElementById('pagination');
-        const skeletonLoader = document.getElementById('skeleton-loader');
-        const emptyState = document.getElementById('empty-state');
-        const categoryFiltersAccordion = document.getElementById('category-filters-accordion');
-        const resultsSummary = document.getElementById('results-summary');
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        const darkIcon = document.getElementById('theme-toggle-dark-icon');
-        const lightIcon = document.getElementById('theme-toggle-light-icon');
-        const backToTopBtn = document.getElementById('back-to-top-btn');
+        document.addEventListener('DOMContentLoaded', () => {
+            let allPapers = [];
+            let filteredPapers = [];
+            let allCategories = new Set();
+            let categoryCounts = {};
+            let activeCategories = new Set();
+            let currentPage = 1;
+            const papersPerPage = 10;
+            let currentSort = 'date_desc';
 
-        // --- 初始化 ---
-        const init = () => {
-            setupTheme();
-            setupEventListeners();
-            fetchData();
-        };
+            const searchInput = document.getElementById('search-input');
+            const sortSelect = document.getElementById('sort-select');
+            const papersList = document.getElementById('papers-list');
+            const paginationContainer = document.getElementById('pagination');
+            const loadingState = document.getElementById('loading-state');
+            const emptyState = document.getElementById('empty-state');
+            const categoryFiltersContainer = document.getElementById('category-filters');
+            const resultsSummary = document.getElementById('results-summary');
+            
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+            const backToTopBtn = document.getElementById('back-to-top-btn');
 
-        // --- 设置 ---
-        const setupTheme = () => {
-            const updateThemeIcons = () => {
+            // --- 主题切换 (已重构，更健壮) ---
+            const updateTheme = () => {
                 const isDark = document.documentElement.classList.contains('dark');
-                lightIcon.style.display = isDark ? 'block' : 'none';
-                darkIcon.style.display = isDark ? 'none' : 'block';
+                if (isDark) {
+                    lightIcon.classList.remove('hidden');
+                    darkIcon.classList.add('hidden');
+                } else {
+                    darkIcon.classList.remove('hidden');
+                    lightIcon.classList.add('hidden');
+                }
+            };
+
+            const toggleTheme = () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+                updateTheme();
             };
             
-            // 初始加载时设置主题
+            // 初始化
             if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
-            updateThemeIcons();
-            
-            // 监听点击事件
-            themeToggleBtn.addEventListener('click', () => {
-                const isDark = document.documentElement.classList.toggle('dark');
-                localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
-                updateThemeIcons();
+            updateTheme();
+            themeToggleBtn.addEventListener('click', toggleTheme);
+
+            // --- 返回顶部 ---
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.remove('hidden');
+                } else {
+                    backToTopBtn.classList.add('hidden');
+                }
             });
-        };
-        
-        const setupEventListeners = () => {
-            window.addEventListener('scroll', () => backToTopBtn.classList.toggle('hidden', window.scrollY <= 300));
             backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-            
-            let debounceTimer;
-            searchInput.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(applyFiltersAndSort, 300);
-            });
-            sortSelect.addEventListener('change', (e) => {
-                currentSort = e.target.value;
-                applyFiltersAndSort();
-            });
-            papersList.addEventListener('click', (e) => {
-                const target = e.target.closest('.keyword-tag');
-                if (target) {
-                    searchInput.value = target.dataset.keyword;
-                    applyFiltersAndSort();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-            categoryFiltersAccordion.addEventListener('click', (e) => {
-                const target = e.target.closest('.category-filter-btn');
-                if (target) {
-                    toggleCategoryFilter(target.dataset.category);
-                }
-            });
-        };
 
-        // --- 数据处理 ---
-        async function fetchData() {
-            try {
-                const response = await fetch('database.json');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                allPapers = await response.json();
-                
-                const counts = {};
-                const categoriesByGroup = { "Computer Science": [], "Statistics": [], "Physics": [], "Mathematics": [], "Quantitative Biology": [], "Quantitative Finance": [], "Electrical Engineering": [], "Other": [] };
-                const groupMapping = { "cs": "Computer Science", "stat": "Statistics", "astro-ph": "Physics", "cond-mat": "Physics", "gr-qc": "Physics", "hep-ex": "Physics", "hep-lat": "Physics", "hep-ph": "Physics", "hep-th": "Physics", "math-ph": "Physics", "nlin": "Physics", "nucl-ex": "Physics", "nucl-th": "Physics", "quant-ph": "Physics", "math": "Mathematics", "q-bio": "Quantitative Biology", "q-fin": "Quantitative Finance", "eess": "Electrical Engineering" };
+            // --- 实用工具函数 ---
+            const sanitize = (str) => {
+                if (str === null || str === undefined) return '';
+                const temp = document.createElement('div');
+                temp.textContent = str;
+                return temp.innerHTML;
+            };
 
-                allPapers.forEach(paper => {
-                    const primaryCategory = paper.categories?.[0] || paper.cate;
-                    if (primaryCategory) {
-                        const prefix = primaryCategory.split('.')[0];
-                        const group = groupMapping[prefix] || "Other";
-                        if (categoriesByGroup[group] && !categoriesByGroup[group].includes(primaryCategory)) {
-                            categoriesByGroup[group].push(primaryCategory);
+            // --- 数据获取与预处理 ---
+            async function fetchData() {
+                try {
+                    const response = await fetch('database.json');
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    allPapers = await response.json();
+                    
+                    const counts = {};
+                    allPapers.forEach(paper => {
+                        const primaryCategory = paper.categories?.[0] || paper.cate;
+                        if (primaryCategory) {
+                             allCategories.add(primaryCategory);
+                             counts[primaryCategory] = (counts[primaryCategory] || 0) + 1;
                         }
-                        counts[primaryCategory] = (counts[primaryCategory] || 0) + 1;
-                    }
-                });
-                categoryCounts = counts;
-                
-                skeletonLoader.style.display = 'none';
-                renderCategoryFilters(categoriesByGroup);
-                applyFiltersAndSort();
-            } catch (error) {
-                skeletonLoader.innerHTML = `<p class="text-red-500 text-center">加载数据失败: ${error.message}</p>`;
+                    });
+                    categoryCounts = counts;
+                    
+                    filteredPapers = [...allPapers];
+                    loadingState.style.display = 'none';
+                    renderCategoryFilters();
+                    render();
+                } catch (error) {
+                    loadingState.innerHTML = `<p class="text-red-500">加载数据失败: ${error.message}</p>`;
+                }
             }
-        }
 
-        // --- 渲染 ---
-        const render = () => {
-            papersList.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-            setTimeout(() => {
+            // --- 渲染逻辑 ---
+            function render() {
                 papersList.innerHTML = '';
                 emptyState.classList.toggle('hidden', filteredPapers.length > 0);
                 
-                if (allPapers.length > 0 && filteredPapers.length < allPapers.length) {
-                    resultsSummary.textContent = `找到 ${filteredPapers.length} 篇相关结果。`;
+                if (filteredPapers.length < allPapers.length) {
+                    resultsSummary.textContent = `在 ${allPapers.length} 篇论文中，共找到 ${filteredPapers.length} 篇相关结果。`;
                     resultsSummary.classList.remove('hidden');
                 } else {
                     resultsSummary.classList.add('hidden');
@@ -263,167 +225,222 @@
 
                 if (filteredPapers.length === 0) {
                     paginationContainer.innerHTML = '';
-                    papersList.classList.remove('opacity-0');
                     return;
                 }
                 
                 const startIndex = (currentPage - 1) * papersPerPage;
                 const papersToRender = filteredPapers.slice(startIndex, startIndex + papersPerPage);
 
-                const fragment = document.createDocumentFragment();
-                papersToRender.forEach(paper => fragment.appendChild(createPaperCard(paper)));
-                papersList.appendChild(fragment);
+                papersToRender.forEach(paper => {
+                    papersList.appendChild(createPaperCard(paper));
+                });
 
                 renderPagination();
-                papersList.classList.remove('opacity-0');
-            }, 300);
-        };
-        
-        const createPaperCard = (paper) => {
-             const aiData = paper.AI || {};
-             const authors = Array.isArray(paper.authors) ? paper.authors.join(', ') : 'N/A';
-             const keywords = (aiData.keywords ? aiData.keywords.split(',').map(k => k.trim()).filter(Boolean) : []).map(keyword => `<button data-keyword="${sanitize(keyword)}" class="keyword-tag mr-1 mb-1 px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800 focus:outline-none">${sanitize(keyword)}</button>`).join('');
-             const originalComment = paper.comment?.trim() || 'None';
-             const aiComment = aiData.comments || 'N/A';
-             const primaryCategory = paper.categories?.[0] || paper.cate || 'N/A';
-             const card = document.createElement('div');
-             card.className = 'bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden';
-             card.innerHTML = `<div class="p-6"><p class="text-sm text-gray-500 dark:text-gray-400 mb-1">${sanitize(primaryCategory)} | ${sanitize(paper.date)}</p><h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${sanitize(paper.title)}</h2><p class="text-gray-600 dark:text-gray-300 italic mb-3">${sanitize(aiData.title_translation || '暂无标题翻译。')}</p><p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${sanitize(authors)}</p><div class="mb-4"><div class="flex flex-wrap items-center"><span class="font-semibold mr-2 shrink-0">关键词:</span><div>${keywordsHTML || 'N/A'}</div></div></div><div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border-l-4 border-blue-400 dark:border-blue-500"><p class="font-semibold text-sm text-blue-800 dark:text-blue-300">作者备注:</p><p class="text-sm text-blue-700 dark:text-blue-200">${sanitize(originalComment)}</p></div><div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-lg mb-4 border-l-4 border-amber-400 dark:border-amber-500"><p class="font-semibold mb-1 text-amber-800 dark:text-amber-300">AI 点评:</p><p class="text-amber-700 dark:text-amber-200">${sanitize(aiComment)}</p></div><div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg mb-4"><p class="font-semibold mb-1">TL;DR:</p><p>${sanitize(aiData.tldr || 'N/A')}</p></div><details class="details-arrow"><summary class="cursor-pointer font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-between"><span>显示完整的AI分析与摘要</span></summary><div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4"><div><h4 class="font-semibold text-lg mb-2">AI生成的摘要</h4><p>${sanitize(aiData.summary || 'N/A')}</p></div><div><h4 class="font-semibold text-lg mb-2">研究动机</h4><p>${sanitize(aiData.motivation || 'N/A')}</p></div><div><h4 class="font-semibold text-lg mb-2">研究方法</h4><p>${sanitize(aiData.method || 'N/A')}</p></div><div><h4 class="font-semibold text-lg mb-2">研究成果</h4><p>${sanitize(aiData.result || 'N/A')}</p></div><div><h4 class="font-semibold text-lg mb-2">研究结论</h4><p>${sanitize(aiData.conclusion || 'N/A')}</p></div><div><h4 class="font-semibold text-lg mb-2">摘要翻译</h4><p>${sanitize(aiData.translation || 'N/A')}</p></div><div><h4 class="font-semibold text-lg mb-2">原文摘要</h4><p class="text-sm text-gray-500 dark:text-gray-400">${sanitize(paper.summary)}</p></div></div></details></div><div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-3"><a href="https://arxiv.org/abs/${sanitize(paper.id)}" target="_blank" rel="noopener noreferrer" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">在arXiv上查看 →</a></div>`;
-             return card;
-        };
-        
-        const renderCategoryFilters = (groups) => {
-            const fragment = document.createDocumentFragment();
-            Object.keys(groups).sort().forEach(groupName => {
-                if (groups[groupName].length > 0) {
-                    const details = document.createElement('details');
-                    details.className = 'details-arrow border-b border-gray-200 dark:border-gray-700 py-2';
-                    const summary = document.createElement('summary');
-                    summary.className = 'font-semibold cursor-pointer text-gray-800 dark:text-gray-200';
-                    summary.textContent = groupName;
-                    details.appendChild(summary);
-                    
-                    const list = document.createElement('div');
-                    list.className = 'mt-2 pl-2 space-y-1';
-                    groups[groupName].sort().forEach(cat => {
-                        const count = categoryCounts[cat] || 0;
-                        const button = document.createElement('button');
-                        button.textContent = `${cat} (${count})`;
-                        button.dataset.category = cat;
-                        button.className = 'w-full text-left px-2 py-1.5 text-sm rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 category-filter-btn';
-                        list.appendChild(button);
-                    });
-                    details.appendChild(list);
-                    fragment.appendChild(details);
-                }
-            });
-            categoryFiltersAccordion.appendChild(fragment);
-        };
-
-        const renderPagination = () => {
-            paginationContainer.innerHTML = '';
-            const totalPages = Math.ceil(filteredPapers.length / papersPerPage);
-            if (totalPages <= 1) return;
-
-            const createButton = (text, onClick, disabled = false, isCurrent = false) => {
-                const button = document.createElement('button');
-                button.textContent = text;
-                button.disabled = disabled;
-                button.className = `px-3 py-1 mx-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed ${isCurrent ? 'bg-indigo-500 text-white dark:bg-indigo-600' : 'bg-white dark:bg-gray-800'}`;
-                button.onclick = onClick;
-                return button;
-            };
-
-            paginationContainer.appendChild(createButton('«', () => { currentPage--; applyFiltersAndSort(); }, currentPage === 1));
-            const pages = getPaginationPages(currentPage, totalPages);
-            pages.forEach(pageNum => {
-                if (pageNum === '...') {
-                    const dots = document.createElement('span');
-                    dots.textContent = '...';
-                    dots.className = 'px-3 py-1 mx-1';
-                    paginationContainer.appendChild(dots);
-                } else {
-                    paginationContainer.appendChild(createButton(pageNum, () => { currentPage = pageNum; render(); }, false, currentPage === pageNum));
-                }
-            });
-            paginationContainer.appendChild(createButton('»', () => { currentPage++; applyFiltersAndSort(); }, currentPage === totalPages));
-        };
-        
-        const getPaginationPages = (currentPage, totalPages, width = 2) => {
-            if (totalPages <= (width * 2 + 3)) return [...Array(totalPages).keys()].map(i => i + 1);
-            const pages = new Set([1, totalPages]);
-            for (let i = Math.max(2, currentPage - width); i <= Math.min(totalPages - 1, currentPage + width); i++) {
-                pages.add(i);
             }
-            const result = [...pages].sort((a, b) => a - b);
-            const withDots = [];
-            let last = 0;
-            for (const page of result) {
-                if (page - last > 1) withDots.push('...');
-                withDots.push(page);
-                last = page;
+
+            function createPaperCard(paper) {
+                const aiData = paper.AI || {};
+                const authors = Array.isArray(paper.authors) ? paper.authors.join(', ') : 'N/A';
+                
+                const keywords = aiData.keywords ? aiData.keywords.split(',').map(k => k.trim()).filter(k => k) : [];
+                const keywordsHTML = keywords.map(keyword =>
+                    `<button data-keyword="${sanitize(keyword)}" class="keyword-tag mr-1 mb-1 px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800 focus:outline-none">${sanitize(keyword)}</button>`
+                ).join('');
+
+                const originalComment = paper.comment?.trim() || 'None';
+                const aiComment = aiData.comments || 'N/A';
+                const primaryCategory = paper.categories?.[0] || paper.cate || 'N/A';
+                
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-[1.02]';
+                card.innerHTML = `
+                    <div class="p-6">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">${sanitize(primaryCategory)} | ${sanitize(paper.date)}</p>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${sanitize(paper.title)}</h2>
+                        <p class="text-gray-600 dark:text-gray-300 italic mb-3">
+                            ${sanitize(aiData.title_translation || '暂无标题翻译。')}
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${sanitize(authors)}</p>
+                        <div class="mb-4">
+                            <div class="flex flex-wrap items-center">
+                                <span class="font-semibold mr-2 shrink-0">关键词:</span>
+                                <div>${keywordsHTML || 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border-l-4 border-blue-400 dark:border-blue-500">
+                            <p class="font-semibold text-sm text-blue-800 dark:text-blue-300">作者备注:</p>
+                            <p class="text-sm text-blue-700 dark:text-blue-200">${sanitize(originalComment)}</p>
+                        </div>
+                        <div class="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-lg mb-4 border-l-4 border-amber-400 dark:border-amber-500">
+                             <p class="font-semibold mb-1 text-amber-800 dark:text-amber-300">AI 点评:</p>
+                             <p class="text-amber-700 dark:text-amber-200">${sanitize(aiComment)}</p>
+                        </div>
+                        <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg mb-4">
+                            <p class="font-semibold mb-1">TL;DR:</p>
+                            <p>${sanitize(aiData.tldr || 'N/A')}</p>
+                        </div>
+                        <details class="details-arrow">
+                            <summary class="cursor-pointer font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-between">
+                                <span>显示完整的AI分析与摘要</span>
+                            </summary>
+                            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                                <div><h4 class="font-semibold text-lg mb-2">AI生成的摘要</h4><p>${sanitize(aiData.summary || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">研究动机</h4><p>${sanitize(aiData.motivation || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">研究方法</h4><p>${sanitize(aiData.method || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">研究成果</h4><p>${sanitize(aiData.result || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">研究结论</h4><p>${sanitize(aiData.conclusion || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">摘要翻译</h4><p>${sanitize(aiData.translation || 'N/A')}</p></div>
+                                <div><h4 class="font-semibold text-lg mb-2">原文摘要</h4><p class="text-sm text-gray-500 dark:text-gray-400">${sanitize(paper.summary)}</p></div>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-3">
+                         <a href="https://arxiv.org/abs/${sanitize(paper.id)}" target="_blank" rel="noopener noreferrer" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                             在arXiv上查看 →
+                         </a>
+                    </div>
+                `;
+                return card;
             }
-            return withDots;
-        };
+            
+            function renderCategoryFilters() {
+                categoryFiltersContainer.innerHTML = '<span class="font-semibold mr-4 shrink-0">按分类筛选:</span>';
+                const sorted = [...allCategories].sort();
+                sorted.forEach(cat => {
+                    const tag = document.createElement('button');
+                    const count = categoryCounts[cat] || 0;
+                    tag.textContent = `${cat} (${count})`;
+                    tag.className = 'tag bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-indigo-200 dark:hover:bg-indigo-800';
+                    tag.dataset.category = cat;
+                    tag.onclick = () => toggleCategoryFilter(cat);
+                    categoryFiltersContainer.appendChild(tag);
+                });
+            }
 
-        // --- 过滤/排序 ---
-        const applyFiltersAndSort = () => {
-            let tempPapers = [...allPapers];
-            const searchTerm = searchInput.value.toLowerCase().trim();
+            function renderPagination() {
+                paginationContainer.innerHTML = '';
+                const totalPages = Math.ceil(filteredPapers.length / papersPerPage);
+                if (totalPages <= 1) return;
 
-            if (searchTerm) {
-                if (sortSelect.value !== 'relevance') {
+                const createButton = (text, onClick, disabled = false, isCurrent = false) => {
+                    const button = document.createElement('button');
+                    button.textContent = text;
+                    button.disabled = disabled;
+                    button.className = `px-4 py-2 mx-1 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed ${isCurrent ? 'bg-indigo-500 text-white dark:bg-indigo-600' : 'bg-white dark:bg-gray-800'}`;
+                    button.onclick = onClick;
+                    return button;
+                };
+
+                paginationContainer.appendChild(createButton('«', () => { currentPage--; render(); }, currentPage === 1));
+                const pages = getPaginationPages(currentPage, totalPages);
+                pages.forEach(pageNum => {
+                    if (pageNum === '...') {
+                        const dots = document.createElement('span');
+                        dots.textContent = '...';
+                        dots.className = 'px-4 py-2 mx-1';
+                        paginationContainer.appendChild(dots);
+                    } else {
+                        paginationContainer.appendChild(createButton(pageNum, () => { currentPage = pageNum; render(); }, false, currentPage === pageNum));
+                    }
+                });
+                paginationContainer.appendChild(createButton('»', () => { currentPage++; render(); }, currentPage === totalPages));
+            }
+            
+            function getPaginationPages(currentPage, totalPages, width = 2) {
+                if (totalPages <= (width * 2 + 3)) return [...Array(totalPages).keys()].map(i => i + 1);
+                const pages = new Set([1, totalPages]);
+                for (let i = Math.max(2, currentPage - width); i <= Math.min(totalPages - 1, currentPage + width); i++) {
+                    pages.add(i);
+                }
+                const result = [...pages].sort((a,b) => a-b);
+                const withDots = [];
+                let last = 0;
+                for(const page of result) {
+                    if(page - last > 1) withDots.push('...');
+                    withDots.push(page);
+                    last = page;
+                }
+                return withDots;
+            }
+
+            function applyFiltersAndSort() {
+                let tempPapers = [...allPapers];
+                const searchTerm = searchInput.value.toLowerCase().trim();
+
+                if (searchTerm) {
                     sortSelect.value = 'relevance';
+                    currentSort = 'relevance';
+                    tempPapers = tempPapers.map(paper => {
+                        const title = (paper.title || '').toLowerCase();
+                        const authors = (paper.authors || []).join(', ').toLowerCase();
+                        const keywords = (paper.AI?.keywords || '').toLowerCase();
+                        let score = 0;
+                        if (title.includes(searchTerm)) score += 2;
+                        if (authors.includes(searchTerm)) score += 3;
+                        if (keywords.includes(searchTerm)) score += 1;
+                        return { ...paper, score };
+                    }).filter(paper => paper.score > 0);
+                } else if (sortSelect.value === 'relevance') {
+                   sortSelect.value = 'date_desc';
+                   currentSort = 'date_desc';
                 }
-                currentSort = 'relevance';
-                tempPapers = tempPapers.map(paper => {
-                    const title = (paper.title || '').toLowerCase();
-                    const authors = (paper.authors || []).join(', ').toLowerCase();
-                    const keywords = (paper.AI?.keywords || '').toLowerCase();
-                    let score = 0;
-                    if (title.includes(searchTerm)) score += 2;
-                    if (authors.includes(searchTerm)) score += 3;
-                    if (keywords.includes(searchTerm)) score += 1;
-                    return { ...paper, score };
-                }).filter(paper => paper.score > 0);
-            } else if (sortSelect.value === 'relevance') {
-               sortSelect.value = 'date_desc';
-               currentSort = 'date_desc';
+
+                if (activeCategories.size > 0) {
+                    tempPapers = tempPapers.filter(paper => activeCategories.has(paper.categories?.[0] || paper.cate));
+                }
+
+                if (currentSort === 'date_desc') {
+                    tempPapers.sort((a, b) => new Date(b.date) - new Date(a.date));
+                } else if (currentSort === 'relevance') {
+                    tempPapers.sort((a, b) => (b.score || 0) - (a.score || 0));
+                }
+
+                filteredPapers = tempPapers;
+                currentPage = 1;
+                render();
             }
 
-            if (activeCategories.size > 0) {
-                tempPapers = tempPapers.filter(paper => activeCategories.has(paper.categories?.[0] || paper.cate));
+            function toggleCategoryFilter(category) {
+                const button = categoryFiltersContainer.querySelector(`[data-category="${category}"]`);
+                if (activeCategories.has(category)) {
+                    activeCategories.delete(category);
+                    button.classList.remove('bg-indigo-500', 'dark:bg-indigo-600', 'text-white');
+                    button.classList.add('bg-gray-200', 'dark:bg-gray-700');
+                } else {
+                    activeCategories.add(category);
+                    button.classList.add('bg-indigo-500', 'dark:bg-indigo-600', 'text-white');
+                    button.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+                }
+                applyFiltersAndSort();
             }
+            
+            let debounceTimer;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(applyFiltersAndSort, 300); 
+            });
+            
+            sortSelect.addEventListener('change', (e) => {
+                currentSort = e.target.value;
+                if (currentSort === 'relevance' && !searchInput.value) {
+                    sortSelect.value = 'date_desc';
+                    currentSort = 'date_desc';
+                }
+                applyFiltersAndSort();
+            });
 
-            if (currentSort === 'date_desc') {
-                tempPapers.sort((a, b) => new Date(b.date) - new Date(a.date));
-            } else if (currentSort === 'relevance') {
-                tempPapers.sort((a, b) => (b.score || 0) - (a.score || 0));
-            }
+            papersList.addEventListener('click', (e) => {
+                const target = e.target.closest('.keyword-tag');
+                if (target) {
+                    const keyword = target.dataset.keyword;
+                    searchInput.value = keyword;
+                    applyFiltersAndSort();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
 
-            filteredPapers = tempPapers;
-            currentPage = 1;
-            render();
-        };
-
-        const toggleCategoryFilter = (category) => {
-            const buttons = document.querySelectorAll(`[data-category="${category}"]`);
-            if (activeCategories.has(category)) {
-                activeCategories.delete(category);
-                buttons.forEach(btn => {
-                    btn.classList.remove('bg-indigo-100', 'dark:bg-indigo-900', 'font-semibold');
-                });
-            } else {
-                activeCategories.add(category);
-                buttons.forEach(btn => {
-                   btn.classList.add('bg-indigo-100', 'dark:bg-indigo-900', 'font-semibold');
-                });
-            }
-            applyFiltersAndSort();
-        };
-        
-        init();
-    });
+            fetchData();
+        });
     </script>
 </body>
 </html>
