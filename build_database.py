@@ -1,70 +1,146 @@
 import os
+import glob
 import json
 import re
-from datetime import datetime
+from collections import defaultdict
 
-# --- 配置区 ---
-DATA_DIR = "data" 
-OUTPUT_DIR = "docs" 
-DATABASE_FILENAME = os.path.join(OUTPUT_DIR, "database.json")
+# 定义一个简单的英文停用词列表，用于构建搜索索引时忽略这些常见词
+STOP_WORDS = set([
+    "a", "an", "the", "and", "or", "in", "on", "of", "for", "to", "with",
+    "is", "are", "was", "were", "it", "its", "i", "you", "he", "she", "we", "they",
+    "as", "at", "by", "from", "that", "this", "which", "who", "what", "where",
+    "when", "why", "how", "not", "no", "but", "if", "so", "then", "just", "very"
+])
 
-def get_enhanced_files(directory):
-    """扫描data目录，找到所有AI增强后的jsonl文件。"""
-    all_files = []
-    for filename in os.listdir(directory):
-        if re.match(r"\d{4}-\d{2}-\d{2}_AI_enhanced_.*\.jsonl$", filename):
-            all_files.append(os.path.join(directory, filename))
-    all_files.sort(reverse=True)
-    return all_files
+def build_database_from_jsonl():
+    """
+    构建数据库的主函数。
+    它直接从 'data' 目录下的 *_AI_enhanced_Chinese.jsonl 文件中读取结构化数据，然后生成：
+    1. 按月份分片的数据文件 (database-YYYY-MM.json)
+    2. 一个清单文件 (index.json)
+    3. 一个专用的搜索索引文件 (search_index.json)
+    """
+    monthly_data = defaultdict(list)
+    search_index = defaultdict(set)
+    total_paper_count = 0
+    skipped_paper_count = 0
 
-def main():
-    """主函数，合并所有jsonl文件到一个单一的数据库文件。"""
-    print("开始构建数据库...")
-    
-    enhanced_files = get_enhanced_files(DATA_DIR)
-    if not enhanced_files:
-        print("在data目录中未找到任何AI增强后的文件。")
+    output_dir = "docs/data"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"创建目录: {output_dir}")
+
+    jsonl_files = glob.glob("data/*_AI_enhanced_Chinese.jsonl")
+    if not jsonl_files:
+        print("错误: 在 'data' 目录下没有找到任何 '_AI_enhanced_Chinese.jsonl' 文件。")
         return
 
-    all_papers = []
-    for filepath in enhanced_files:
-        print(f"正在处理文件: {filepath}")
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                for line in f:
-                    try:
-                        paper_data = json.loads(line)
-                        date_str = os.path.basename(filepath).split('_')[0]
-                        paper_data['date'] = date_str
+    print(f"找到 {len(jsonl_files)} 个 .jsonl 数据源文件。开始处理...")
+
+    for jsonl_file in jsonl_files:
+        base_name = os.path.basename(jsonl_file)
+        date_from_filename_match = re.match(r'(\d{4}-\d{2}-\d{2})', base_name)
+        if not date_from_filename_match:
+            print(f"警告: 无法从文件名 {base_name} 中提取日期，已跳过。")
+            continue
+        file_date = date_from_filename_match.group(1)
+
+        with open(jsonl_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                try:
+                    raw_data = json.loads(line)
+
+                    # 核心验证逻辑：只要求论文有ID
+                    paper_id = raw_data.get("id")
+                    if not paper_id:
+                        skipped_paper_count += 1
+                        continue
+
+                    ai_enhanced_info = raw_data.get("AI", {})
+                    
+                    # 关键修正：正确处理keywords字段，将其从字符串分割为数组
+                    keywords_str = ai_enhanced_info.get("keywords", "")
+                    keywords_list = []
+                    if keywords_str and isinstance(keywords_str, str):
+                        # 分割字符串并去除每个关键词两端的空格
+                        keywords_list = [kw.strip() for kw in keywords_str.split(',') if kw.strip()]
+
+                    # --- 全面、安全地获取所有数据 ---
+                    paper_data = {
+                        "id": paper_id,
+                        "title": raw_data.get("title", "无标题"),
+                        "date": file_date,
+                        "url": raw_data.get("abs", "#"),
+                        "pdf_url": raw_data.get("pdf", "#"), # 直接获取PDF链接
+                        "authors": ", ".join(raw_data.get("authors", [])),
+                        "abstract": raw_data.get("summary", ""),
+                        "comment": raw_data.get("comment", ""),
+                        "categories": raw_data.get("categories", []),
                         
-                        # **核心URL修正逻辑**
-                        # 优先使用爬虫提供的'url'字段，因为它可能包含版本号(v1, v2等)
-                        # 如果'url'字段不存在或为空，则尝试用'id'字段来构建
-                        if 'url' not in paper_data or not paper_data['url']:
-                            paper_id = paper_data.get('id', '')
-                            if paper_id:
-                                paper_data['url'] = f"https://arxiv.org/abs/{paper_id}"
-                            else:
-                                paper_data['url'] = '#' # 最终回退
-                        
-                        all_papers.append(paper_data)
-                    except json.JSONDecodeError:
-                        print(f"警告：跳过文件 {filepath} 中的一个无效JSON行。")
-        except Exception as e:
-            print(f"错误：处理文件 {filepath} 时出错: {e}")
+                        # 从AI对象中提取所有丰富信息，并修正字段名
+                        "zh_title": ai_enhanced_info.get("title_translation"),
+                        "translation": ai_enhanced_info.get("translation"), # 摘要翻译
+                        "keywords": keywords_list, # 使用处理后的数组
+                        "tldr": ai_enhanced_info.get("tldr"),
+                        "comments": ai_enhanced_info.get("comments"), # AI点评
+                        "motivation": ai_enhanced_info.get("motivation"),
+                        "method": ai_enhanced_info.get("method"),
+                        "conclusion": ai_enhanced_info.get("conclusion") or ai_enhanced_info.get("result") # 兼容result字段
+                    }
+                    
+                    year_month = file_date[:7]
+                    monthly_data[year_month].append(paper_data)
+                    total_paper_count += 1
 
-    all_papers.sort(key=lambda x: x.get('date', '0000-00-00'), reverse=True)
+                    # --- 构建搜索索引 ---
+                    text_to_index = (paper_data.get("title", "") + " " + paper_data.get("abstract", "")).lower()
+                    tokens = re.findall(r'\b[a-z]{3,}\b', text_to_index)
+                    for token in tokens:
+                        if token not in STOP_WORDS:
+                            search_index[token].add(paper_id)
+                    
+                    if paper_data.get("keywords"):
+                        for keyword in paper_data.get("keywords"):
+                            if keyword:
+                                search_index[keyword.lower()].add(paper_id)
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+                except (json.JSONDecodeError, AttributeError):
+                    skipped_paper_count += 1
+                    continue
 
-    try:
-        with open(DATABASE_FILENAME, 'w', encoding='utf-8') as f:
-            json.dump(all_papers, f, ensure_ascii=False, indent=2)
-        print(f"\n数据库构建成功！总共处理了 {len(all_papers)} 篇论文。")
-        print(f"数据已保存到: {DATABASE_FILENAME}")
-    except Exception as e:
-        print(f"错误：写入数据库文件时出错: {e}")
+    if total_paper_count > 0:
+        print(f"处理完成 {total_paper_count} 篇论文。")
+        if skipped_paper_count > 0:
+            print(f"因缺少ID或格式错误，跳过了 {skipped_paper_count} 篇论文。")
+    else:
+        print("警告: 未能成功处理任何论文。")
+        return
 
+    # --- 开始写入文件 ---
+    for month, papers in monthly_data.items():
+        sorted_papers = sorted(papers, key=lambda p: p['date'], reverse=True)
+        month_file_path = os.path.join(output_dir, f"database-{month}.json")
+        with open(month_file_path, 'w', encoding='utf-8') as f:
+            json.dump(sorted_papers, f, indent=2, ensure_ascii=False)
+    print(f"成功写入 {len(monthly_data)} 个月度数据分片文件。")
+
+    available_months = sorted(monthly_data.keys(), reverse=True)
+    manifest = {"availableMonths": available_months, "totalPaperCount": total_paper_count}
+    manifest_file_path = os.path.join(output_dir, "index.json")
+    with open(manifest_file_path, 'w', encoding='utf-8') as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    print("成功写入清单文件 index.json。")
+
+    final_search_index = {token: list(ids) for token, ids in search_index.items()}
+    search_index_file_path = os.path.join(output_dir, "search_index.json")
+    with open(search_index_file_path, 'w', encoding='utf-8') as f:
+        json.dump(final_search_index, f, ensure_ascii=False)
+    print("成功写入搜索索引文件 search_index.json。")
+    
+    old_db_path = "docs/database.json"
+    if os.path.exists(old_db_path):
+        os.remove(old_db_path)
+        print(f"已删除旧的数据文件: {old_db_path}")
 
 if __name__ == "__main__":
-    main()
+    build_database_from_jsonl()

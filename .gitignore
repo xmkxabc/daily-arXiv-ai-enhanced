@@ -14,3 +14,4 @@ test/*
 
 # 数据文件
 docs/database.json
+docs/data/
