@@ -190,11 +190,14 @@ Contributions to this project are welcome! You can participate by:
 *   Submitting Pull Requests to implement new features or fix problems.
 *   Improving documentation.
 
+# Star history
+[![Star History Chart](https://api.star-history.com/svg?repos=xmkxabc/daae&type=Date)](https://www.star-history.com/#xmkxabc/daae&Date)
+# Status
+[![arXiv-daily-ai-enhanced](https://github.com/xmkxabc/daily-arXiv-ai-enhanced/actions/workflows/run.yml/badge.svg)](https://github.com/xmkxabc/daily-arXiv-ai-enhanced/actions/workflows/run.yml)
+
 ## 📜 License
 
 This project is licensed under the [Apache-2.0 license](./LICENSE).
-
----
 
 ---
 
