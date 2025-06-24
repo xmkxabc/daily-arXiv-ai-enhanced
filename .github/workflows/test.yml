@@ -1,14 +1,14 @@
 # 工作流名称
-name: 运行数据库构建脚本
+name: 数据库构建和MD文件、Github Pages生成
 
 on:
   schedule:
     # 每天在UTC时间16:30运行
     - cron: "30 16 * * *"
   workflow_dispatch: # 允许手动触发
-  push:
-    branches:
-      - main # 当推送到主分支时也触发，方便测试
+  #push:  
+  #  branches:  
+  #    - main # 当推送到主分支时也触发，方便测试
 
 jobs:
   # --- 任务1: 构建数据和网站文件 ---
