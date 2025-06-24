@@ -52,33 +52,39 @@ def main():
     """主函数，运行增强过程。"""
     args = parse_args()
     
-    # --- 加载密钥和模型配置 ---
-    primary_api_key = os.environ.get("GOOGLE_API_KEY")
-    secondary_api_key = os.environ.get("SECONDARY_GOOGLE_API_KEY")
-    primary_model_name = os.environ.get("MODEL_NAME", 'gemini-1.5-flash-latest')
-    fallback_models_str = os.environ.get("FALLBACK_MODELS", "gemini-1.5-pro-latest,gemini-1.0-pro")
-    
-    # 构建级联调用计划
+    # --- [核心改造] 加载统一的密钥和模型优先级列表 ---
+    google_api_keys_str = os.environ.get("GOOGLE_API_KEYS")
+    model_priority_list_str = os.environ.get("MODEL_PRIORITY_LIST")
+    # [新] 从环境变量加载API调用间隔，默认为6秒以遵循10 RPM的限制
+    api_call_interval = int(os.environ.get("API_CALL_INTERVAL", 6))
+
+
+    if not google_api_keys_str or not model_priority_list_str:
+        print("错误: 请在 .env 文件中设置 GOOGLE_API_KEYS 和 MODEL_PRIORITY_LIST 环境变量。", file=sys.stderr)
+        sys.exit(1)
+
+    api_keys = [key.strip() for key in google_api_keys_str.split(',') if key.strip()]
+    model_names = [name.strip() for name in model_priority_list_str.split(',') if name.strip()]
+
+    if not api_keys or not model_names:
+        print("错误: GOOGLE_API_KEYS 或 MODEL_PRIORITY_LIST 环境变量不能为空。", file=sys.stderr)
+        sys.exit(1)
+        
+    # --- [核心改造] 构建级联调用计划 ---
+    # 策略: 优先使用最高优先级的模型，轮询所有密钥。
     cascade_plan = []
-    if primary_api_key:
-        cascade_plan.append({
-            "key_name": "主密钥", 
-            "api_key": primary_api_key, 
-            "model_name": primary_model_name
-        })
-    if secondary_api_key:
-        secondary_model_names = [primary_model_name]
-        if fallback_models_str:
-            secondary_model_names.extend([name.strip() for name in fallback_models_str.split(',') if name.strip()])
-        for model_name in secondary_model_names:
+    # 外层循环遍历模型列表 (Outer loop for models)
+    for model_name in model_names:
+        # 内层循环遍历密钥列表 (Inner loop for keys)
+        for i, api_key in enumerate(api_keys):
             cascade_plan.append({
-                "key_name": "副密钥", 
-                "api_key": secondary_api_key, 
+                "key_name": f"密钥_{i+1}",
+                "api_key": api_key,
                 "model_name": model_name
             })
             
     if not cascade_plan:
-        print("错误: 找不到任何可用的API密钥来构建调用计划。", file=sys.stderr)
+        print("错误: 无法根据环境变量构建有效的调用计划。", file=sys.stderr)
         sys.exit(1)
         
     print("--- 调用计划已构建 ---", file=sys.stderr)
@@ -130,14 +136,19 @@ def main():
         print(f"\n正在处理 {idx + 1}/{len(data)}: {d['id']}", file=sys.stderr)
         final_result = None
         
-        while current_task_index < len(cascade_plan):
-            task = cascade_plan[current_task_index]
+        # 保存当前任务索引，以便在论文级别进行重置
+        paper_start_task_index = current_task_index
+        
+        while paper_start_task_index < len(cascade_plan):
+            task = cascade_plan[paper_start_task_index]
             key = (task["api_key"], task["model_name"])
             chain = model_chains.get(key)
 
             if not chain:
                 print(f"  ! 跳过已失败的任务: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
-                current_task_index += 1
+                paper_start_task_index += 1
+                # 更新全局任务索引
+                current_task_index = paper_start_task_index
                 continue
 
             for attempt in range(args.retries):
@@ -158,7 +169,9 @@ def main():
                     error_type = "配额耗尽" if isinstance(e, google_exceptions.ResourceExhausted) else "模型未找到"
                     print(f"  ! {error_type}: <{task['key_name']}> - {task['model_name']}", file=sys.stderr)
                     # 永久切换到下一个任务
-                    current_task_index += 1
+                    paper_start_task_index += 1
+                    # 更新全局任务索引
+                    current_task_index = paper_start_task_index
                     # 跳出重试循环，让外层while循环决定下一步
                     break 
 
@@ -179,7 +192,9 @@ def main():
             d['AI'] = final_result
             
         enhanced_data.append(d)
-        time.sleep(6)
+        # [核心改造] 使用可配置的延迟，确保不超过API频率限制
+        print(f"  ...等待 {api_call_interval} 秒...", file=sys.stderr)
+        time.sleep(api_call_interval)
 
     output_filename = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
     with open(output_filename, "w", encoding="utf-8") as f:
