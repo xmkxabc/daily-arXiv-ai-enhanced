@@ -6,9 +6,12 @@ on:
     # 每天在UTC时间16:30运行
     - cron: "30 16 * * *"
   workflow_dispatch: # 允许手动触发
-  push:
-    branches:
-      - main # 当推送到主分支时也触发，方便测试
+  # --- [核心改造] 注释掉 push 触发器 ---
+  # 当推送到主分支时将不再触发此工作流。
+  # 如果将来需要恢复，只需取消下面的注释即可。
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   # --- 任务1: 构建数据和网站文件 ---
@@ -27,13 +30,24 @@ jobs:
 
       - name: Run Data Processing Pipeline
         id: run_scripts
+        # --- [核心改造] 更新环境变量以匹配新版 enhance.py ---
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          SECONDARY_GOOGLE_API_KEY: ${{ secrets.SECONDARY_GOOGLE_API_KEY }}
+          # [新] 从 secrets 中读取统一的、按优先级排列的密钥列表
+          GOOGLE_API_KEYS: ${{ secrets.GOOGLE_API_KEYS }}
+          # [新] 从 repository variables 中读取统一的、按优先级排列的模型列表
+          MODEL_PRIORITY_LIST: ${{ vars.MODEL_PRIORITY_LIST }}
+          # 其他环境变量保持不变
+          # --- [核心改造] 添加新的环境变量 ---
+          # 从 GitHub Variables 中读取 API 调用间隔时间
+          API_CALL_INTERVAL: ${{ vars.API_CALL_INTERVAL }}
           LANGUAGE: ${{ vars.LANGUAGE }}
           CATEGORIES: ${{ vars.CATEGORIES }}
-          MODEL_NAME: ${{ vars.MODEL_NAME }}
-          FALLBACK_MODELS: ${{ vars.FALLBACK_MODELS }}
+          # GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          # SECONDARY_GOOGLE_API_KEY: ${{ secrets.SECONDARY_GOOGLE_API_KEY }}
+          # LANGUAGE: ${{ vars.LANGUAGE }}
+          # CATEGORIES: ${{ vars.CATEGORIES }}
+          # MODEL_NAME: ${{ vars.MODEL_NAME }}
+          # FALLBACK_MODELS: ${{ vars.FALLBACK_MODELS }}
         run: |
           source .venv/bin/activate
           
@@ -67,13 +81,13 @@ jobs:
           echo "report_path=$OUTPUT_MD_FILE" >> $GITHUB_OUTPUT
 
           echo "工作流成功完成！"
-       
-      #注释   
+      
+      #注释    
       - name: Set Current Date
         id: date
         run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
       
-      #注释 
+      #注释
       - name: Create or Update Daily Digest Issue
         uses: peter-evans/create-issue-from-file@v5
         with:
