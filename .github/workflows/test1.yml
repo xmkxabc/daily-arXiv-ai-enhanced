@@ -1,4 +1,4 @@
-# 文件路径: .github/workflows/test1.yml
+# 文件路径: .github/workflows/test.yml
 #
 # 功能: 一个用于快速测试核心功能的、可手动触发的工作流。
 # 它不会修改仓库中的任何文件，只在日志中显示结果。
@@ -21,8 +21,12 @@ jobs:
 
       - name: Create mock data for test
         run: |
-          # 创建一个只包含一篇论文的测试数据文件
-          echo '{"id": "2303.10135", "title": "A Min-Plus Low-Rank-Plus-Sparse Method for Matrix Factorization", "summary": "We propose a new matrix factorization method based on min-plus algebra. This method is particularly useful for matrices that can be approximated as a sum of a low-rank matrix and a sparse matrix. We show that our method can recover the underlying low-rank and sparse components with high accuracy. The algorithm is based on a novel application of the Viterbi algorithm on a trellis representing the matrix. We provide theoretical guarantees for the recovery and demonstrate its effectiveness on synthetic and real-world datasets."}' > test_data.jsonl
+          # [核心改造] 创建一个包含三篇论文的测试数据文件
+          cat <<EOF > test_data.jsonl
+          {"id": "2303.10135", "title": "A Min-Plus Low-Rank-Plus-Sparse Method for Matrix Factorization", "summary": "We propose a new matrix factorization method based on min-plus algebra. This method is particularly useful for matrices that can be approximated as a sum of a low-rank matrix and a sparse matrix. We show that our method can recover the underlying low-rank and sparse components with high accuracy."}
+          {"id": "2401.08406", "title": "Language Models are Super-Spam-Detectors", "summary": "This paper explores the capability of large language models (LLMs) to detect sophisticated forms of spam. By fine-tuning on a diverse dataset of spam and legitimate content, we demonstrate that LLMs can achieve state-of-the-art performance, outperforming traditional filter-based methods, especially against adversarial attacks."}
+          {"id": "2406.12458", "title": "Vision-Based Pre-Collision Braking System for E-Scooters", "summary": "We present a novel, lightweight, vision-based pre-collision braking system designed for e-scooters. The system uses a single monocular camera and an efficient deep learning model to detect obstacles and estimate time-to-collision, automatically applying brakes to prevent accidents. Field tests show a significant reduction in collision incidents."}
+          EOF
 
       - name: Run AI Enhancement on mock data
         env:
