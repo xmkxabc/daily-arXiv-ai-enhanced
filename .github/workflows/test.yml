@@ -4,7 +4,7 @@ name: 数据库构建和MD文件、Github Pages生成
 on:
   schedule:
     # 每天在UTC时间16:30运行
-    - cron: "30 16 * * *"
+    #- cron: "30 16 * * *"
   workflow_dispatch: # 允许手动触发
   #push:  
   #  branches:  
