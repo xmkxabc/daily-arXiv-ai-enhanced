@@ -7,6 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* 新增：为平滑滚动提供基础 */
+        html {
+            scroll-behavior: smooth;
+        }
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8f9fa;
@@ -25,8 +29,9 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .keyword-tag {
+        .keyword-tag { /* 这个类现在用于所有可点击的标签 */
             transition: background-color 0.2s ease;
+            cursor: pointer;
         }
         .keyword-tag:hover {
             background-color: #3b82f6; /* blue-500 */
@@ -70,19 +75,65 @@
             padding-top: 1rem; /* Corresponds to pt-4 */
             border-top-width: 1px; /* Corresponds to border-t */
         }
+
+        /* --- 新增：快速导航栏 CSS --- */
+        .quick-nav-container {
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .quick-nav .year-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.25rem;
+        }
+        .quick-nav .year-label {
+            font-weight: 700;
+            color: #1f2937;
+            padding: 0.5rem 0.75rem;
+            background-color: #f3f4f6;
+            border-radius: 0.375rem;
+            margin-right: 0.75rem;
+        }
+        .quick-nav .month-btn {
+            padding: 0.5rem 0.75rem;
+            margin: 0.25rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            color: #4b5563;
+            transition: background-color 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        .quick-nav .month-btn:hover {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+        .quick-nav .month-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="text-gray-800">
 
     <div class="container mx-auto px-4 py-8">
         
-        <header class="text-center mb-8">
+        <header class="text-center mb-4">
             <h1 class="text-4xl font-bold text-gray-900">AI论文每日速览</h1>
             <p class="text-lg text-gray-600 mt-2">Daily Arxiv AI Enhancer</p>
         </header>
 
-        <div class="sticky top-4 z-10 mb-8">
-            <input type="text" id="searchInput" placeholder="搜索论文标题、摘要、关键词 (中/英文)..." 
+        <!-- 新增：快速导航容器 -->
+        <div id="quick-nav-container" class="sticky top-0 z-20 py-2 mb-8 quick-nav-container">
+            <nav id="quick-nav" class="quick-nav px-4"></nav>
+        </div>
+
+        <!-- 修改：调整搜索框的 sticky top 值以适应导航栏 -->
+        <div class="sticky top-[78px] z-10 mb-8">
+            <input type="text" id="searchInput" placeholder="搜索论文或点击分类/关键词进行筛选..." 
                    class="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
         </div>
 
@@ -103,9 +154,13 @@
     <script>
         // --- 全局状态管理 ---
         const state = {
-            manifest: null, searchIndex: null, allPapers: new Map(),
+            manifest: null, 
+            searchIndex: null, 
+            categoryIndex: null, // 新增: 分类索引
+            allPapers: new Map(),
             loadedMonths: new Set(), currentMonthIndex: 0,
-            isFetching: false, isSearchMode: false
+            isFetching: false, isSearchMode: false,
+            navObserver: null // 新增: 导航高亮观察者
         };
 
         // --- DOM 元素引用 ---
@@ -113,6 +168,7 @@
         const searchInput = document.getElementById('searchInput');
         const loader = document.getElementById('loader');
         const endOfListMessage = document.getElementById('end-of-list-message');
+        const quickNav = document.getElementById('quick-nav'); // 新增: 导航栏引用
 
         // --- 工具函数 ---
         function escapeCQ(str) {
@@ -127,6 +183,9 @@
                 state.manifest = await response.json();
 
                 if (state.manifest.availableMonths && state.manifest.availableMonths.length > 0) {
+                    // 新增：初始化新增的功能
+                    setupQuickNav();
+                    setupNavObserver();
                     await fetchAndRenderMonth(state.manifest.availableMonths[0]);
                 } else {
                      papersContainer.innerHTML = `<p class="text-center text-gray-500">数据清单为空。</p>`;
@@ -135,6 +194,60 @@
             } catch (error) {
                 console.error("Initialization failed:", error);
                 papersContainer.innerHTML = `<p class="text-center text-red-500">加载数据失败。请确保您在项目的 'docs' 目录下启动了本地服务器。</p>`;
+            }
+        }
+
+        // --- 新增：设置快速导航 ---
+        function setupQuickNav() {
+            const monthsByYear = state.manifest.availableMonths.reduce((acc, month) => {
+                const year = month.substring(0, 4);
+                if (!acc[year]) acc[year] = [];
+                acc[year].push(month);
+                return acc;
+            }, {});
+
+            let navHTML = '';
+            const sortedYears = Object.keys(monthsByYear).sort((a, b) => b - a);
+
+            sortedYears.forEach(year => {
+                navHTML += `<div class="year-group"><span class="year-label">${year}</span>`;
+                monthsByYear[year].forEach(month => {
+                    const monthLabel = month.substring(5, 7);
+                    navHTML += `<button class="month-btn" data-month="${month}" onclick="navigateToMonth('${month}')">${monthLabel}月</button>`;
+                });
+                navHTML += `</div>`;
+            });
+            quickNav.innerHTML = navHTML;
+        }
+
+        // --- 新增：设置导航高亮观察者 ---
+        function setupNavObserver() {
+            const options = { rootMargin: '-40% 0px -60% 0px', threshold: 0 };
+            state.navObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const month = entry.target.dataset.monthAnchor;
+                        document.querySelectorAll('.month-btn.active').forEach(btn => btn.classList.remove('active'));
+                        const targetBtn = document.querySelector(`.month-btn[data-month="${month}"]`);
+                        if (targetBtn) targetBtn.classList.add('active');
+                    }
+                });
+            }, options);
+        }
+        
+        // --- 新增：导航到指定月份 ---
+        async function navigateToMonth(month) {
+            const targetIndex = state.manifest.availableMonths.indexOf(month);
+            if (targetIndex === -1) return;
+
+            while (state.currentMonthIndex < targetIndex) {
+                if (state.isFetching) await new Promise(resolve => setTimeout(resolve, 100));
+                await loadNextMonth(false); // 调用 loadNextMonth 加载但不触发滚动
+            }
+            
+            const anchor = document.getElementById(`month-anchor-${month}`);
+            if (anchor) {
+                anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
 
@@ -151,7 +264,7 @@
                         state.allPapers.set(paper.id, paper);
                     }
                 });
-                if (!state.isSearchMode) renderPapers(papers);
+                if (!state.isSearchMode) renderPapers(papers, month); // 修改：传入月份
                 state.loadedMonths.add(month);
             } catch (error) {
                 console.error(`Failed to load data for month ${month}:`, error);
@@ -161,8 +274,19 @@
             }
         }
 
-        function renderPapers(papers) {
+        // 修改：renderPapers 接受月份参数以创建锚点
+        function renderPapers(papers, month) {
             const fragment = document.createDocumentFragment();
+            
+            // 如果是在非搜索模式下，为每个月添加一个锚点
+            if (month && !state.isSearchMode) {
+                const monthAnchor = document.createElement('div');
+                monthAnchor.id = `month-anchor-${month}`;
+                monthAnchor.dataset.monthAnchor = month; 
+                fragment.appendChild(monthAnchor);
+                state.navObserver.observe(monthAnchor);
+            }
+
             papers.forEach((paper, index) => {
                 if (paper && paper.id) {
                     try {
@@ -185,16 +309,16 @@
                 const validKeywords = paper.keywords.filter(kw => typeof kw === 'string' && kw.trim() !== '');
                 if (validKeywords.length > 0) {
                     keywordsHTML = validKeywords.map(kw => 
-                        `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full cursor-pointer" onclick="performKeywordSearch('${escapeCQ(kw)}')">${kw}</span>`
+                        `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performKeywordSearch('${escapeCQ(kw)}')">${kw}</span>`
                     ).join('');
                 }
             }
 
+            // 修改：使分类标签可点击
             const categoriesHTML = (paper.categories && Array.isArray(paper.categories))
-                ? paper.categories.map(cat => `<span class="inline-block bg-gray-100 text-gray-600 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full">${cat}</span>`).join('')
+                ? paper.categories.map(cat => `<span class="keyword-tag inline-block bg-gray-100 text-gray-600 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performCategorySearch('${escapeCQ(cat)}')">${cat}</span>`).join('')
                 : '';
 
-            // FIX: Dynamically construct correct URLs using paper.id
             const absUrl = paper.id ? `https://arxiv.org/abs/${paper.id}` : '#';
             const pdfUrl = paper.id ? `https://arxiv.org/pdf/${paper.id}` : '#';
 
@@ -223,7 +347,7 @@
             `;
 
             card.innerHTML = `
-                <p class="text-sm text-gray-500 mb-2">${categoriesHTML} ${categoriesHTML ? '|' : ''} ${paper.date || '未知日期'}</p> 
+                <p class="text-sm text-gray-500 mb-2">${paper.date || '未知日期'} ${categoriesHTML ? '| ' : ''}${categoriesHTML}</p> 
                 <h2 class="text-2xl font-bold mb-2 text-gray-900">${paper.title || '无标题'}</h2>
                 ${paper.zh_title ? `<h3 class="text-xl font-semibold mb-3 text-blue-700">${paper.zh_title}</h3>` : ''}
                 <div class="text-sm text-gray-600 mb-3">
@@ -246,7 +370,7 @@
             return card;
         }
 
-        // --- MODIFIED THIS FUNCTION ---
+        // --- MODIFIED THIS FUNCTION --- (此函数在您提供的代码中已是最新版本，无需修改)
         function toggleAIDetails(paperId) {
             const detailsSection = document.getElementById(`ai-details-${paperId}`);
             if (detailsSection) {
@@ -254,54 +378,114 @@
             }
         }
         
-        // --- Unchanged functions ---
+        // --- Unchanged functions --- (此函数在您提供的代码中已是最新版本，无需修改)
         function setupIntersectionObserver() {
             const options = { root: null, rootMargin: '0px', threshold: 0.5 };
             const callback = (entries, observer) => { entries.forEach(entry => { if (entry.isIntersecting && !state.isFetching && !state.isSearchMode) { loadNextMonth(); } }); };
             const observer = new IntersectionObserver(callback, options);
             if (loader) observer.observe(loader);
         };
-        function loadNextMonth() {
-            state.currentMonthIndex++;
-            if (state.manifest && state.manifest.availableMonths && state.currentMonthIndex < state.manifest.availableMonths.length) {
+        
+        // 修改：loadNextMonth 增加一个参数以支持非滚动加载
+        async function loadNextMonth(triggeredByScroll = true) {
+            if (state.isFetching) return;
+            if (state.manifest && state.manifest.availableMonths && state.currentMonthIndex + 1 < state.manifest.availableMonths.length) {
+                state.currentMonthIndex++;
                 const nextMonth = state.manifest.availableMonths[state.currentMonthIndex];
-                fetchAndRenderMonth(nextMonth);
+                await fetchAndRenderMonth(nextMonth);
             } else {
                 if(loader) loader.classList.add('hidden');
-                if(endOfListMessage) endOfListMessage.classList.remove('hidden');
+                if(endOfListMessage && triggeredByScroll) endOfListMessage.classList.remove('hidden');
             }
         };
+        
+        // 重大修改：handleSearch 函数现在更智能
         async function handleSearch() {
-            const query = searchInput.value.toLowerCase().trim();
+            const query = searchInput.value.trim();
+            const lowerCaseQuery = query.toLowerCase();
+            
+            document.getElementById('quick-nav-container').style.display = query ? 'none' : 'block';
+
             if (!query) {
-                state.isSearchMode = false; papersContainer.innerHTML = '';
-                renderPapers(Array.from(state.allPapers.values()).sort((a,b) => b.date.localeCompare(a.date)));
+                state.isSearchMode = false;
+                papersContainer.innerHTML = '';
+                state.navObserver.disconnect();
+                const loadedMonthsInOrder = state.manifest.availableMonths.filter(m => state.loadedMonths.has(m));
+                for (const month of loadedMonthsInOrder) {
+                    const papersForMonth = Array.from(state.allPapers.values())
+                        .filter(p => p.id.startsWith(month.replace('-', '').substring(2)))
+                        .sort((a,b) => b.date.localeCompare(a.date));
+                    renderPapers(papersForMonth, month);
+                }
                 return;
             }
-            state.isSearchMode = true; loader.classList.remove('hidden');
-            if (!state.searchIndex) {
-                try {
-                    const response = await fetch('./data/search_index.json');
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    state.searchIndex = await response.json();
-                } catch (error) { console.error("Search index load failed:", error); loader.classList.add('hidden'); return; }
-            }
-            const queryTokens = query.split(/\s+/).filter(Boolean); let matchingIds = new Set();
-            queryTokens.forEach((token, index) => {
-                const foundIds = new Set();
-                for (const key in state.searchIndex) { if (key.includes(token)) { state.searchIndex[key].forEach(id => foundIds.add(id)); } }
-                if (index === 0) { matchingIds = foundIds; } else { matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id))); }
-            });
-            const requiredMonths = new Set();
-            matchingIds.forEach(id => { const month = `20${id.substring(0, 2)}-${id.substring(2, 4)}`; if (!state.loadedMonths.has(month)) { requiredMonths.add(month); } });
-            await Promise.all(Array.from(requiredMonths).map(month => fetchAndRenderMonth(month)));
-            const results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+
+            state.isSearchMode = true; 
+            loader.classList.remove('hidden');
             papersContainer.innerHTML = '';
-            if(results.length > 0){ renderPapers(results); } else { papersContainer.innerHTML = `<p class="text-center text-gray-500">未找到与 "${query}" 相关的论文。</p>`; }
+            state.navObserver.disconnect();
+
+            try {
+                if (!state.categoryIndex) {
+                    const catResponse = await fetch('./data/category_index.json');
+                    if (!catResponse.ok) throw new Error('Category index not found');
+                    state.categoryIndex = await catResponse.json();
+                }
+                if (!state.searchIndex) {
+                    const searchResponse = await fetch('./data/search_index.json');
+                    if (!searchResponse.ok) throw new Error('Search index not found');
+                    state.searchIndex = await searchResponse.json();
+                }
+            } catch(error) {
+                console.error("Index loading failed:", error);
+                papersContainer.innerHTML = `<p class="text-center text-red-500">索引文件加载失败: ${error.message}。请确保文件存在。</p>`;
+                loader.classList.add('hidden');
+                return;
+            }
+
+            let matchingIds = new Set();
+            if (state.categoryIndex[query]) {
+                state.categoryIndex[query].forEach(id => matchingIds.add(id));
+            } else {
+                const queryTokens = lowerCaseQuery.split(/\s+/).filter(Boolean);
+                queryTokens.forEach((token, index) => {
+                    const foundIds = new Set();
+                    for (const key in state.searchIndex) { 
+                        if (key.includes(token)) { state.searchIndex[key].forEach(id => foundIds.add(id)); } 
+                    }
+                    if (index === 0) { matchingIds = foundIds; } 
+                    else { matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id))); }
+                });
+            }
+
+            const requiredMonths = new Set();
+            matchingIds.forEach(id => { 
+                const month = `20${id.substring(0, 2)}-${id.substring(2, 4)}`; 
+                if (!state.loadedMonths.has(month)) { requiredMonths.add(month); } 
+            });
+            await Promise.all(Array.from(requiredMonths).map(month => fetchAndRenderMonth(month)));
+
+            const results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+            if(results.length > 0){ 
+                renderPapers(results, null); // 搜索结果不按月份渲染
+            } else { 
+                papersContainer.innerHTML = `<p class="text-center text-gray-500">未找到与 "${query}" 相关的论文。</p>`; 
+            }
             loader.classList.add('hidden');
         };
+
+        // 新增：分类搜索触发函数
+        function performCategorySearch(category) {
+            searchInput.value = category; 
+            handleSearch(); 
+            window.scrollTo(0, 0);
+        };
+        
+        // 修改：统一的标签点击处理函数
         function performKeywordSearch(keyword) {
-            searchInput.value = keyword; handleSearch(); window.scrollTo(0, 0);
+            searchInput.value = keyword; 
+            handleSearch(); 
+            window.scrollTo(0, 0);
         };
 
         let searchTimeout;

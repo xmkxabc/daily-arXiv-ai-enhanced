@@ -19,9 +19,11 @@ def build_database_from_jsonl():
     1. 按月份分片的数据文件 (database-YYYY-MM.json)
     2. 一个清单文件 (index.json)
     3. 一个专用的搜索索引文件 (search_index.json)
+    4. 一个全新的分类索引文件 (category_index.json)
     """
     monthly_data = defaultdict(list)
     search_index = defaultdict(set)
+    category_index = defaultdict(set) # 新增：初始化分类索引
     total_paper_count = 0
     skipped_paper_count = 0
 
@@ -105,6 +107,11 @@ def build_database_from_jsonl():
                             if keyword:
                                 search_index[keyword.lower()].add(paper_id)
 
+                    # 新增：构建分类索引
+                    if paper_data.get("categories"):
+                        for category in paper_data.get("categories"):
+                            category_index[category].add(paper_id)
+
                 except (json.JSONDecodeError, AttributeError):
                     skipped_paper_count += 1
                     continue
@@ -137,6 +144,13 @@ def build_database_from_jsonl():
     with open(search_index_file_path, 'w', encoding='utf-8') as f:
         json.dump(final_search_index, f, ensure_ascii=False)
     print("成功写入搜索索引文件 search_index.json。")
+    
+    # 新增：写入分类索引文件
+    final_category_index = {category: list(ids) for category, ids in category_index.items()}
+    category_index_file_path = os.path.join(output_dir, "category_index.json")
+    with open(category_index_file_path, 'w', encoding='utf-8') as f:
+        json.dump(final_category_index, f, ensure_ascii=False)
+    print("成功写入分类索引文件 category_index.json。")
     
     old_db_path = "docs/database.json"
     if os.path.exists(old_db_path):
