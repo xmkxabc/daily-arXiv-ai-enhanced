@@ -26,6 +26,10 @@ class ArxivPipeline:
                 item["summary"] = result.summary
                 # **新增**: 提取并保存arXiv官方的comment字段
                 item["comment"] = result.comment
+                # **新增**: 提取并保存arXiv官方的PDF链接
+                item["pdf_url"] = result.pdf_url
+                # **新增**: 提取并保存arXiv官方的categories字段
+                item["categories"] = result.categories
                 item["cate"] = result.primary_category
                 # 使用PDF链接作为URL，更直接
                 # 转换为abs链接

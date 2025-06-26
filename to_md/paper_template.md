@@ -1,7 +1,7 @@
 ### [{idx}] [{title}]({url})
 > *{title_translation}*
 
-*{authors}* | **Main category: {cate}**
+*{authors}* | **Category: {categories}**
 
 **Keywords:** {keywords}
 

@@ -53,10 +53,10 @@ def main():
     date_match = re.search(r'(\d{4}-\d{2}-\d{2})', args.output)
     date_str = date_match.group(1) if date_match else datetime.now().strftime('%Y-%m-%d')
 
-    data = load_jsonl_data(args.input)
+    all_papers_data = load_jsonl_data(args.input)
     paper_template = load_template(args.template)
 
-    if not data:
+    if not all_papers_data:
         final_content = f"# AI-Enhanced arXiv Daily {date_str}\n\n"
         final_content += "### 今日没有找到新论文。\n"
         with open(args.output, "w", encoding='utf-8') as f:
@@ -64,89 +64,122 @@ def main():
         print(f"成功生成报告 (无新论文): {args.output}")
         sys.exit(0)
 
-    # --- 数据分类和排序 ---
+    # --- 1. 数据分类和排序 ---
     preference_str = os.environ.get('CATEGORIES', 'cs.CV,cs.CL,cs.LG,cs.AI,stat.ML,eess.IV')
     preference = [cat.strip() for cat in preference_str.split(',')]
-    def rank(category):
-        try:
-            return preference.index(category)
-        except ValueError:
-            return len(preference)
+    
+    # 新的数据结构：主论文和交叉引用
+    primary_papers = defaultdict(list)
+    cross_references = defaultdict(list)
+    all_categories = set()
 
-    papers_by_category = defaultdict(list)
-    for paper in data:
-        primary_category = (paper.get("categories") or [paper.get("cate")])[0] or "Uncategorized"
-        papers_by_category[primary_category].append(paper)
-    sorted_categories = sorted(papers_by_category.keys(), key=rank)
-
-    # --- Markdown 内容生成 ---
-    # 1. 预先渲染所有论文卡片
-    rendered_papers = {}
-    for idx, paper in enumerate(data):
-        ai_data = paper.get('AI', {})
-        primary_category = (paper.get("categories") or [paper.get("cate")])[0] or "Uncategorized" # 获取主分类，默认为 "Uncategorized"
-
+    for paper in all_papers_data:
         # 兼容 "categories" 和 "cate" 字段
         categories = paper.get("categories") or ([paper.get("cate")] if paper.get("cate") else [])
         if not categories:
             categories = ["Uncategorized"]
             
         paper['all_categories_str'] = ", ".join(categories) # 存储所有分类，用于模板显示
+
+        # 确定主分类
+        primary_cat = categories[0]
+        primary_papers[primary_cat].append(paper)
+        all_categories.add(primary_cat)
         
-        # **核心修正**: 调整context字典的键名，以精确匹配paper_template.md中的占位符
+        # 为次要分类创建交叉引用
+        for secondary_cat in categories[1:]:
+            cross_references[secondary_cat].append({
+                "id": paper.get("id"),
+                "title": paper.get("title"),
+                "primary_category_slug": slugify(primary_cat) # 用于生成锚点链接
+            })
+            all_categories.add(secondary_cat)
+
+    # 对所有出现的分类进行排序
+    def rank(category):
+        try:
+            return preference.index(category)
+        except ValueError:
+            return len(preference)
+    sorted_categories = sorted(list(all_categories), key=rank)
+
+    # --- 2. 预先渲染所有主论文卡片 ---
+    rendered_papers = {}
+    for idx, paper in enumerate(all_papers_data):
+        ai_data = paper.get('AI', {})
+        
         context = {
             "idx": idx + 1,
             "id": paper.get("id", "N/A"),
             "title": paper.get("title", "N/A"),
             "authors": ", ".join(paper.get("authors", ["N/A"])),
-            "comment": paper.get("comment", "无"), # 作者备注
-            "categories": paper.get('all_categories_str', 'N/A'), # 使用我们创建的完整分类字符串
-            "pdf_url": paper.get("pdf_url", "N/A"), # PDF链接
-            "cate": primary_category,
+            "comment": paper.get("comment", "无"),
+            "pdf_url": paper.get("pdf_url", "N/A"),
             "url": f"https://arxiv.org/abs/{paper.get('id', '')}",
-            
-            # AI 数据
+            "cate": paper.get("categories", ["N/A"])[0],
+            "categories": paper.get('all_categories_str', 'N/A'), # 使用我们创建的完整分类字符串
+
             "title_translation": ai_data.get('title_translation', 'N/A'),
             "keywords": ai_data.get('keywords', 'N/A'),
             "tldr": ai_data.get('tldr', 'N/A'),
             "motivation": ai_data.get('motivation', 'N/A'),
             "method": ai_data.get('method', 'N/A'),
             "conclusion": ai_data.get('conclusion', 'N/A'),
-
-            # --- 已修正以下键名以匹配模板 ---
-            "ai_comment": ai_data.get('comments', 'N/A'),      # 模板需要 {ai_comment}
-            "results": ai_data.get('result', 'N/A'),           # 模板需要 {results}
-            "ai_Abstract": ai_data.get('summary', 'N/A'),      # 模板需要 {ai_Abstract}
-            "abstract_translation": ai_data.get('translation', 'N/A'), # 模板需要 {abstract_translation}
+            "ai_comment": ai_data.get('comments', 'N/A'),
+            "results": ai_data.get('result', 'N/A'),
+            "ai_Abstract": ai_data.get('summary', 'N/A'),
+            "abstract_translation": ai_data.get('translation', 'N/A'),
         }
         
-        # 填充模板
         temp_paper_content = paper_template
         for key, value in context.items():
-            # 使用 str(value or '') 确保即使值为None也能安全替换为空字符串
             temp_paper_content = temp_paper_content.replace(f"{{{key}}}", str(value or ''))
-        rendered_papers[paper.get("id")] = temp_paper_content
+        
+        # 使用论文ID作为锚点，这样交叉引用才能找到它
+        paper_anchor = f"<a id='{slugify(paper.get('id'))}'></a>\n"
+        rendered_papers[paper.get("id")] = paper_anchor + temp_paper_content
 
-    # 2. 生成TOC (目录)
-    toc_parts = [f"## 今日总计: {len(data)} 篇论文", "### 目录"]
+    # --- 3. 生成TOC (目录) ---
+    toc_parts = [f"## 今日总计: {len(all_papers_data)} 篇独立论文", "### 目录"]
     for cate in sorted_categories:
         slug = slugify(cate)
-        toc_parts.append(f"- [{cate}](#{slug}) ({len(papers_by_category[cate])} 篇)")
+        # 目录计数现在只计算主论文数
+        primary_count = len(primary_papers[cate])
+        cross_ref_count = len(cross_references[cate])
+        
+        count_str = f"{primary_count}"
+        if cross_ref_count > 0:
+            count_str += f" (+{cross_ref_count} 篇交叉引用)"
+            
+        toc_parts.append(f"- [{cate}](#{slug}) ({count_str})")
     
-    # 3. 按分类组装最终内容
+    # --- 4. 按分类组装最终内容 ---
     content_by_category_str = ""
     for cate in sorted_categories:
         slug = slugify(cate)
-        # **已修改**: 使用 <small> 标签来缩小导航链接的字体
         content_by_category_str += f"<a id='{slug}'></a>\n## {cate} \n\n"
         
-        for paper_data in papers_by_category[cate]:
-            paper_id = paper_data.get("id")
-            if paper_id in rendered_papers:
-                content_by_category_str += rendered_papers[paper_id]
-                content_by_category_str += f"\n[⬆️ 返回分类顶部](#{slug}) | [⬆️ 返回总目录](#toc)\n\n---\n\n"
+        # 渲染主论文
+        if primary_papers[cate]:
+            for paper_data in primary_papers[cate]:
+                paper_id = paper_data.get("id")
+                if paper_id in rendered_papers:
+                    content_by_category_str += rendered_papers[paper_id]
+                    content_by_category_str += f"\n[⬆️ 返回分类顶部](#{slug}) | [⬆️ 返回总目录](#toc)\n\n---\n\n"
+        else:
+            # 如果某个分类只有交叉引用，没有主论文，可以加个提示
+            content_by_category_str += "本分类下无主论文。\n\n"
 
-    # 4. 组装最终的完整Markdown页面
+        # 渲染交叉引用
+        if cross_references[cate]:
+            content_by_category_str += "*<small>亦可见于本分类 (来自其他主分类):</small>*\n"
+            for ref in cross_references[cate]:
+                # 链接到论文的锚点，锚点由论文ID生成
+                ref_anchor = slugify(ref['id'])
+                content_by_category_str += f"- *<small><a href=\"#{ref_anchor}\">{ref['title']}</a></small>*\n"
+            content_by_category_str += "\n---\n\n"
+
+    # --- 5. 组装最终的完整Markdown页面 ---
     report_title = f"# AI-Enhanced arXiv Daily {date_str}\n\n"
     toc_anchor = "<a id='toc'></a>\n"
     final_toc = "\n".join(toc_parts) + "\n\n---\n"
@@ -156,7 +189,7 @@ def main():
     with open(args.output, "w", encoding='utf-8') as f:
         f.write(final_content)
     
-    print(f"成功将 {len(data)} 篇论文转换为Markdown，并保存到 {args.output}")
+    print(f"成功将 {len(all_papers_data)} 篇论文转换为Markdown，并保存到 {args.output}")
 
 if __name__ == "__main__":
     main()
