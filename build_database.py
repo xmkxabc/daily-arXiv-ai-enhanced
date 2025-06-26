@@ -85,7 +85,8 @@ def build_database_from_jsonl():
                         "comments": ai_enhanced_info.get("comments"), # AI点评
                         "motivation": ai_enhanced_info.get("motivation"),
                         "method": ai_enhanced_info.get("method"),
-                        "conclusion": ai_enhanced_info.get("conclusion") or ai_enhanced_info.get("result") # 兼容result字段
+                        "results": ai_enhanced_info.get("result"), # 研究结果
+                        "conclusion": ai_enhanced_info.get("conclusion") # 兼容result字段
                     }
                     
                     year_month = file_date[:7]

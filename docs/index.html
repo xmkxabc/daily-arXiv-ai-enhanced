@@ -205,7 +205,8 @@
             `;
 
             card.innerHTML = `
-                <p class="text-sm text-gray-500 mb-2">${paper.date || '未知日期'} ${categoriesHTML ? '|' : ''} ${categoriesHTML}</p> cd # 日期和分类
+                // <p class="text-sm text-gray-500 mb-2">${paper.date || '未知日期'} ${categoriesHTML ? '|' : ''} ${categoriesHTML}</p> 
+                <p class="text-sm text-gray-500 mb-2">${categoriesHTML} ${categoriesHTML ? '|' : ''} ${paper.date || '未知日期'}</p> 
                 <h2 class="text-2xl font-bold mb-2 text-gray-900">${paper.title || '无标题'}</h2>
                 ${paper.zh_title ? `<h3 class="text-xl font-semibold mb-3 text-blue-700">${paper.zh_title}</h3>` : ''}
                 <div class="text-sm text-gray-600 mb-3">
