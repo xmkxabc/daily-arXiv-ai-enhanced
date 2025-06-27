@@ -8,158 +8,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* 新增：为平滑滚动提供基础 */
-        html {
-            scroll-behavior: smooth;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa;
-        }
-        .paper-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-        .paper-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        .loader {
-            border-top-color: #3498db;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .keyword-tag { /* 这个类现在用于所有可点击的标签 */
-            transition: background-color 0.2s ease;
-            cursor: pointer;
-        }
-        .keyword-tag:hover {
-            background-color: #3b82f6; /* blue-500 */
-            color: white;
-        }
-        .details-section h3 {
-            font-size: 1.125rem; /* text-lg */
-            font-weight: 600; /* font-semibold */
-            margin-bottom: 0.5rem; /* mb-2 */
-            color: #1e3a8a; /* blue-900 */
-        }
-        .details-section p {
-            color: #374151; /* gray-700 */
-            line-height: 1.6;
-        }
-        .info-box {
-            border-left-width: 4px;
-            padding: 1rem;
-            margin-top: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 0 0.5rem 0.5rem 0;
-        }
-        .info-box-title {
-            font-weight: 600;
-        }
-
-        /* --- CSS for the folding animation --- */
-        .ai-details-section {
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.5s ease-in-out, padding-top 0.5s ease-in-out, border-top-width 0.5s ease-in-out;
-            border-top-width: 0;
-            border-top-style: solid;
-            border-color: #e5e7eb; /* Corresponds to border-gray-200 */
-        }
-        .ai-details-section.expanded {
-            max-height: 2000px; /* A large value to ensure content fits */
-            opacity: 1;
-            margin-top: 1rem;  /* Corresponds to mt-4 */
-            padding-top: 1rem; /* Corresponds to pt-4 */
-            border-top-width: 1px; /* Corresponds to border-t */
-        }
-
-        /* --- 新增：快速导航栏 CSS --- */
-        .quick-nav-container {
-            background-color: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .quick-nav .year-group {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 0.25rem;
-        }
-        .quick-nav .year-label {
-            font-weight: 700;
-            color: #1f2937;
-            padding: 0.5rem 0.75rem;
-            background-color: #f3f4f6;
-            border-radius: 0.375rem;
-            margin-right: 0.75rem;
-        }
-        .quick-nav .month-btn {
-            padding: 0.5rem 0.75rem;
-            margin: 0.25rem;
-            border-radius: 0.375rem;
-            font-weight: 500;
-            color: #4b5563;
-            transition: background-color 0.2s, color 0.2s;
-            cursor: pointer;
-        }
-        .quick-nav .month-btn:hover {
-            background-color: #dbeafe;
-            color: #1d4ed8;
-        }
-        .quick-nav .month-btn.active {
-            background-color: #3b82f6;
-            color: white;
-            font-weight: 600;
-        }
-        /* 新增：搜索词高亮样式 */
-        .highlight {
-            background-color: #fef9c3; /* yellow-100 */
-            color: #713f12; /* yellow-900 */
-            font-weight: bold;
-            padding: 1px 2px;
-            border-radius: 3px;
-        }
-        /* 新增：“返回顶部”按钮样式 */
-        .back-to-top-btn {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background-color: rgba(59, 130, 246, 0.8); /* blue-500 with opacity */
-            color: white;
-            width: 3rem;
-            height: 3rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0;
-            transform: translateY(100px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            z-index: 50;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .back-to-top-btn.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        /* --- 新增：骨架屏样式 --- */
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .paper-card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        .paper-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05); }
+        .loader { border-top-color: #3498db; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .keyword-tag { transition: background-color 0.2s ease; cursor: pointer; }
+        .keyword-tag:hover { background-color: #3b82f6; color: white; }
+        .details-section h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; color: #1e3a8a; }
+        .details-section p { color: #374151; line-height: 1.6; }
+        .info-box { border-left-width: 4px; padding: 1rem; margin-top: 1rem; margin-bottom: 1rem; border-radius: 0 0.5rem 0.5rem 0; }
+        .info-box-title { font-weight: 600; }
+        .ai-details-section { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.5s ease-in-out, padding-top 0.5s ease-in-out, border-top-width 0.5s ease-in-out; border-top-width: 0; border-top-style: solid; border-color: #e5e7eb; }
+        .ai-details-section.expanded { max-height: 2000px; opacity: 1; margin-top: 1rem; padding-top: 1rem; border-top-width: 1px; }
+        .quick-nav-container { background-color: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid #e5e7eb; }
+        .quick-nav .year-group { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 0.25rem; }
+        .quick-nav .year-label { font-weight: 700; color: #1f2937; padding: 0.5rem 0.75rem; background-color: #f3f4f6; border-radius: 0.375rem; margin-right: 0.75rem; }
+        .quick-nav .month-btn { padding: 0.5rem 0.75rem; margin: 0.25rem; border-radius: 0.375rem; font-weight: 500; color: #4b5563; transition: background-color 0.2s, color 0.2s; cursor: pointer; }
+        .quick-nav .month-btn:hover { background-color: #dbeafe; color: #1d4ed8; }
+        .quick-nav .month-btn.active { background-color: #3b82f6; color: white; font-weight: 600; }
+        .highlight { background-color: #fef9c3; color: #713f12; font-weight: bold; padding: 1px 2px; border-radius: 3px; }
+        .back-to-top-btn { position: fixed; bottom: 2rem; right: 2rem; background-color: rgba(59, 130, 246, 0.8); color: white; width: 3rem; height: 3rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transform: translateY(100px); transition: opacity 0.3s ease, transform 0.3s ease; z-index: 50; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .back-to-top-btn.visible { opacity: 1; transform: translateY(0); }
         .skeleton-card { background-color: #fff; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); border: 1px solid #e5e7eb; }
-        .skeleton { background-color: #e5e7eb; border-radius: 0.25rem; }
-        .skeleton.h-4 { height: 1rem; }
+        .skeleton { background-color: #e5e7eb; border-radius: 0.25rem; } .skeleton.h-4 { height: 1rem; }
         .skeleton.w-1\/4 { width: 25%; } .skeleton.w-1\/2 { width: 50%; } .skeleton.w-3\/4 { width: 75%; } .skeleton.w-full { width: 100%; }
-        @keyframes pulse { 50% { opacity: .5; } }
-        .skeleton-animate { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-
-        /* --- 新增：收藏按钮样式 --- */
+        @keyframes pulse { 50% { opacity: .5; } } .skeleton-animate { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         .favorite-btn { color: #9ca3af; transition: color 0.2s, transform 0.2s; }
-        .favorite-btn:hover { color: #facc15; /* yellow-400 */ transform: scale(1.1); }
-        .favorite-btn.favorited { color: #f59e0b; /* yellow-500 */ }
+        .favorite-btn:hover { color: #facc15; transform: scale(1.1); } .favorite-btn.favorited { color: #f59e0b; }
+        
+        /* --- 最终UI/UX打磨 --- */
+        header { padding-bottom: 1rem; }
+        .view-toggle { display: flex; align-items: center; background-color: #e5e7eb; border-radius: 9999px; padding: 2px; cursor: pointer; }
+        .view-toggle button { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: #4b5563; transition: all 0.2s ease; border: none; background-color: transparent; }
+        .view-toggle button.active { background-color: white; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .compact-view .compact-hidden { display: none; }
+        .compact-view .paper-card { padding: 1rem; }
+        .compact-view .paper-card h2 { font-size: 1.125rem; }
+        .compact-view .paper-card h3 { font-size: 1rem; margin-bottom: 0.5rem;}
+        
+        /* --- View Transitions API --- */
+        @keyframes fade-in { from { opacity: 0; } }
+        @keyframes fade-out { to { opacity: 0; } }
+        @keyframes slide-from-right { from { transform: translateX(30px); opacity: 0; } }
+        @keyframes slide-to-left { to { transform: translateX(-30px); opacity: 0; } }
+
+        ::view-transition-old(root) { animation: 180ms cubic-bezier(0.4, 0, 1, 1) both fade-out, 300ms cubic-bezier(0.4, 0, 0.2, 1) both slide-to-left; }
+        ::view-transition-new(root) { animation: 320ms cubic-bezier(0, 0, 0.2, 1) 90ms both fade-in, 300ms cubic-bezier(0.4, 0, 0.2, 1) both slide-from-right; }
+        [data-vt-name]::view-transition-old(root) { animation: 180ms cubic-bezier(0.4, 0, 1, 1) both fade-out; }
+        [data-vt-name]::view-transition-new(root) { animation: 320ms cubic-bezier(0, 0, 0.2, 1) 90ms both fade-in; }
     </style>
 </head>
 <body class="text-gray-800">
@@ -171,24 +69,19 @@
             <p id="last-updated" class="text-sm text-gray-500 mt-2"></p>
         </header>
 
-        <!-- 修改：导航栏结构，增加收藏按钮 -->
         <div id="quick-nav-container" class="sticky top-0 z-20 py-2 mb-8 quick-nav-container">
-            <nav id="quick-nav" class="quick-nav px-4 flex justify-between items-center flex-wrap"></nav>
+            <nav id="quick-nav" class="quick-nav px-4 flex justify-between items-center flex-wrap gap-4"></nav>
         </div>
 
-        <!-- 修改：搜索框的 sticky top 值现在由JS动态设定 -->
         <div id="search-bar-container" class="sticky z-10 mb-8" style="top: var(--nav-height, 8px);">
             <input type="text" id="searchInput" placeholder="搜索论文或点击分类/关键词进行筛选..." 
                    class="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
         </div>
         
-        <main>
-            <!-- 新增：搜索结果的头部信息 -->
+        <main id="main-content">
             <div id="search-info" class="mb-4 text-lg text-gray-700 hidden"></div>
-            
             <div id="papers-container" class="space-y-8"></div>
             <div id="search-results-container" class="space-y-8 hidden"></div>
-            <!-- 新增：骨架屏容器 -->
             <div id="skeleton-container" class="space-y-8 hidden"></div>
         </main>
 
@@ -201,7 +94,6 @@
         </div>
     </div>
     
-    <!-- 新增：“返回顶部”按钮HTML -->
     <div id="back-to-top" class="back-to-top-btn">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
     </div>
@@ -209,18 +101,14 @@
     <script>
         // --- 全局状态管理 ---
         const state = {
-            manifest: null, 
-            searchIndex: null, 
-            categoryIndex: null, // 新增: 分类索引
-            allPapers: new Map(),
-            loadedMonths: new Set(), currentMonthIndex: -1, // 关键：初始值为-1
-            isFetching: false, isSearchMode: false,
-            navObserver: null, // 新增: 导航高亮观察者
-            currentQuery: '', // 新增: 当前搜索词
-            favorites: new Set() // 新增: 收藏夹
+            manifest: null, searchIndex: null, categoryIndex: null, allPapers: new Map(),
+            loadedMonths: new Set(), currentMonthIndex: -1, isFetching: false, isSearchMode: false,
+            navObserver: null, currentQuery: '', favorites: new Set(),
+            viewMode: 'detailed' // 新增: 视图模式
         };
 
         // --- DOM 元素引用 ---
+        const mainContainer = document.getElementById('main-content');
         const papersContainer = document.getElementById('papers-container');
         const searchResultsContainer = document.getElementById('search-results-container');
         const skeletonContainer = document.getElementById('skeleton-container');
@@ -236,16 +124,30 @@
         // --- 工具函数 ---
         function escapeCQ(str) { return str ? String(str).replace(/'/g, "\\'") : ''; }
         function escapeRegex(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+        // 新增: 视图过渡辅助函数
+        async function applyViewTransition(updateFunction, vtName = '') {
+            if (!document.startViewTransition) {
+                await updateFunction();
+                return;
+            }
+            mainContainer.dataset.vtName = vtName;
+            const transition = document.startViewTransition(updateFunction);
+            try {
+                await transition.finished;
+            } finally {
+                delete mainContainer.dataset.vtName;
+            }
+        }
 
         // --- 核心功能 ---
         async function init() {
             try {
-                loadFavorites(); // 新增：加载本地收藏
+                loadFavorites();
+                loadViewMode();
                 const response = await fetch('./data/index.json');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 state.manifest = await response.json();
                 
-                // 新增：URL状态管理 - 页面加载时检查URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const queryFromUrl = urlParams.get('q');
 
@@ -253,9 +155,8 @@
                     setupUI();
                     if (queryFromUrl) {
                         searchInput.value = queryFromUrl;
-                        await handleSearch(); // handleSearch 现在可以处理 'favorites'
+                        await handleSearch();
                     } else {
-                        // 优化：明确加载第一个月
                         await loadNextMonth(false); 
                     }
                 } else {
@@ -285,7 +186,7 @@
                 acc[year].push(month);
                 return acc;
             }, {});
-            let navHTML = '<div class="flex-grow">'; // Wrapper for year/month buttons
+            let navHTML = '<div class="flex-grow">';
             const sortedYears = Object.keys(monthsByYear).sort((a, b) => b - a);
             sortedYears.forEach(year => {
                 navHTML += `<div class="year-group"><span class="year-label">${year}</span>`;
@@ -296,11 +197,17 @@
                 navHTML += `</div>`;
             });
             navHTML += '</div>';
-            // 新增：收藏按钮
-            navHTML += `<div class="mt-2 sm:mt-0"><button id="show-favorites-btn" onclick="performTagSearch('favorites')" class="flex items-center space-x-2 px-3 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition shadow">
+
+            const viewToggleHTML = `<div class="view-toggle">
+                <button id="view-detailed-btn" onclick="toggleViewMode('detailed')">详细</button>
+                <button id="view-compact-btn" onclick="toggleViewMode('compact')">紧凑</button>
+            </div>`;
+            const favButtonHTML = `<div><button id="show-favorites-btn" onclick="performTagSearch('favorites')" class="flex items-center space-x-2 px-3 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition shadow">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                 <span>我的收藏</span><span id="favorites-count" class="ml-1 bg-white text-yellow-500 text-xs font-bold rounded-full px-1.5 py-0.5">${state.favorites.size}</span></button></div>`;
-            quickNavContainer.querySelector('#quick-nav').innerHTML = navHTML;
+            
+            quickNavContainer.querySelector('#quick-nav').innerHTML = `${navHTML}<div class="flex items-center gap-4 mt-2 sm:mt-0">${viewToggleHTML}${favButtonHTML}</div>`;
+            updateViewModeUI();
         }
 
         function setupNavObserver() {
@@ -351,7 +258,7 @@
         // --- 核心逻辑：数据加载与渲染 ---
         async function fetchMonth(month) {
             if (state.loadedMonths.has(month)) return;
-            if (state.isFetching) { await new Promise(res => setTimeout(res, 50)); return fetchMonth(month); } // 优雅地等待
+            if (state.isFetching) { await new Promise(res => setTimeout(res, 50)); return fetchMonth(month); }
             state.isFetching = true;
             loader.classList.remove('hidden');
             try {
@@ -360,9 +267,8 @@
                 const papers = await response.json();
                 papers.forEach(paper => { if (paper && paper.id && !state.allPapers.has(paper.id)) state.allPapers.set(paper.id, paper); });
                 state.loadedMonths.add(month);
-            } catch (error) {
-                console.error(`Failed to load data for month ${month}:`, error);
-            } finally {
+            } catch (error) { console.error(`Failed to load data for month ${month}:`, error); } 
+            finally {
                 state.isFetching = false;
                 loader.classList.add('hidden');
             }
@@ -396,7 +302,9 @@
 
         function createPaperCard(paper) {
             const card = document.createElement('article');
+            card.style.viewTransitionName = `card-${paper.id}`;
             card.className = 'paper-card bg-white p-6 rounded-lg shadow-md border border-gray-200';
+            
             let title = paper.title || '无标题';
             let abstract = paper.abstract || '无';
 
@@ -404,7 +312,6 @@
                 const queryTerms = state.currentQuery.toLowerCase().split(/\s+/).filter(Boolean);
                 const regex = new RegExp(queryTerms.map(escapeRegex).join('|'), 'gi');
                 title = title.replace(regex, match => `<span class="highlight">${match}</span>`);
-                abstract = abstract.replace(regex, match => `<span class="highlight">${match}</span>`);
             }
             
             const keywordsHTML = (paper.keywords && paper.keywords.length > 0) ? paper.keywords.map(kw => `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performTagSearch('${escapeCQ(kw)}')">${kw}</span>`).join('') : '无';
@@ -413,16 +320,11 @@
             const pdfUrl = paper.id ? `https://arxiv.org/pdf/${paper.id}` : '#';
             const createInfoBox = (title, content, color) => !content ? '' : `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800">${title}:</p><p class="text-${color}-700">${content}</p></div>`;
             const isFavorited = state.favorites.has(paper.id);
-            const aiAnalysisHTML = `<div id="ai-details-${paper.id}" class="details-section ai-details-section">
-                    <h2 class="text-2xl font-bold mb-4 text-gray-800">AI分析与摘要</h2>
-                    ${paper.motivation ? `<h3>研究动机</h3><p>${paper.motivation}</p><br/>` : ''}
-                    ${paper.method ? `<h3>研究方法</h3><p>${paper.method}</p><br/>` : ''}
-                    ${paper.results ? `<h3>研究结果</h3><p>${paper.results}</p><br/>` : ''}
-                    ${paper.conclusion ? `<h3>研究结论</h3><p>${paper.conclusion}</p><br/>` : ''}
-                    <h3>摘要翻译</h3><p>${paper.translation || '无'}</p><br/>
-                    <h3>原文摘要</h3><p>${abstract}</p>
-                </div>`;
-            card.innerHTML = `<div class="flex justify-between items-start"><p class="text-sm text-gray-500 mb-2 flex-grow">${paper.date||'未知日期'} ${categoriesHTML?'| ':''}${categoriesHTML}</p><button onclick="toggleFavorite(event, '${paper.id}')" title="收藏/取消收藏" class="favorite-btn ${isFavorited?'favorited':''}"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></button></div><h2 class="text-2xl font-bold mb-2 text-gray-900">${title}</h2>${paper.zh_title?`<h3 class="text-xl font-semibold mb-3 text-blue-700">${paper.zh_title}</h3>`:''}<div><p><strong>作者:</strong> ${paper.authors||'未知作者'}</p><p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p></div>${createInfoBox('Comment',paper.comment,'yellow')}${createInfoBox('TL;DR',paper.tldr,'green')}${createInfoBox('AI点评',paper.comments,'indigo')}<div class="flex items-center space-x-4 mt-4"><a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页 (Abs)</a><a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a><button onclick="toggleAIDetails('${paper.id}')" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition">显示/隐藏AI分析</button></div>${aiAnalysisHTML}`;
+            const aiAnalysisHTML = `<div id="ai-details-${paper.id}" class="details-section ai-details-section compact-hidden">...</div>`;
+
+            card.innerHTML = `<div class="flex justify-between items-start"><p class="text-sm text-gray-500 mb-2 flex-grow">${paper.date||'未知日期'} ${categoriesHTML?'| ':''}${categoriesHTML}</p><button onclick="toggleFavorite(event, '${paper.id}')" title="收藏/取消收藏" class="favorite-btn ${isFavorited?'favorited':''}"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></button></div><h2 class="text-2xl font-bold mb-2 text-gray-900">${title}</h2><h3 class="text-xl font-semibold mb-3 text-blue-700">${paper.zh_title||''}</h3><div class="text-sm text-gray-600 mb-3 compact-hidden"><p><strong>作者:</strong> ${paper.authors||'未知作者'}</p><p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p></div><div class="compact-hidden">${createInfoBox('Comment',paper.comment,'yellow')}${createInfoBox('TL;DR',paper.tldr,'green')}${createInfoBox('AI点评',paper.comments,'indigo')}</div><div class="flex items-center space-x-4 mt-4"><a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页</a><a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a><button onclick="toggleAIDetails('${paper.id}')" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition compact-hidden">AI分析</button></div>${aiAnalysisHTML}`;
+            card.querySelector('.ai-details-section').innerHTML = `<h2 class="text-2xl font-bold mb-4 text-gray-800">AI分析与摘要</h2>${paper.motivation?`<h3>研究动机</h3><p>${paper.motivation}</p><br/>`:''}${paper.method?`<h3>研究方法</h3><p>${paper.method}</p><br/>`:''}${paper.results?`<h3>研究结果</h3><p>${paper.results}</p><br/>`:''}${paper.conclusion?`<h3>研究结论</h3><p>${paper.conclusion}</p><br/>`:''}<h3>摘要翻译</h3><p>${paper.translation||'无'}</p><br/><h3>原文摘要</h3><p>${abstract}</p>`;
+
             return card;
         }
 
@@ -431,50 +333,44 @@
             if (detailsSection) detailsSection.classList.toggle('expanded');
         }
         
-        // --- 新增：收藏夹功能 ---
         function loadFavorites() { const favs = localStorage.getItem('arxiv_favorites'); if (favs) { try { state.favorites = new Set(JSON.parse(favs)); } catch (e) { state.favorites = new Set(); } } }
         function saveFavorites() { localStorage.setItem('arxiv_favorites', JSON.stringify(Array.from(state.favorites))); }
         function toggleFavorite(event, paperId) {
             event.stopPropagation();
             const btn = event.currentTarget;
-            if (state.favorites.has(paperId)) {
-                state.favorites.delete(paperId);
-                btn.classList.remove('favorited');
-            } else {
-                state.favorites.add(paperId);
-                btn.classList.add('favorited');
+            const update = () => {
+                if (state.favorites.has(paperId)) {
+                    state.favorites.delete(paperId); btn.classList.remove('favorited');
+                    if (state.currentQuery === 'favorites') btn.closest('.paper-card').remove();
+                } else {
+                    state.favorites.add(paperId); btn.classList.add('favorited');
+                }
+                saveFavorites();
+                document.getElementById('favorites-count').textContent = state.favorites.size;
             }
-            saveFavorites();
-            document.getElementById('favorites-count').textContent = state.favorites.size;
+            // 只有在收藏夹视图中移除时才应用过渡
+            if (state.currentQuery === 'favorites' && state.favorites.has(paperId)) {
+                applyViewTransition(update, 'fav-remove');
+            } else {
+                update();
+            }
         }
         
-        async function showFavorites() {
-            state.isSearchMode = true; state.currentQuery = 'favorites';
-            papersContainer.classList.add('hidden');
-            searchResultsContainer.classList.remove('hidden');
-            searchResultsContainer.innerHTML = '';
-            quickNavContainer.style.display = 'none';
-            searchInfoEl.classList.remove('hidden');
-
-            const favoriteIds = Array.from(state.favorites);
-            if (favoriteIds.length === 0) {
-                searchInfoEl.innerHTML = `您的收藏夹是空的。`;
-                searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">点击论文卡片右上角的<svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>图标来添加收藏。</p>`;
-                return;
-            }
-
-            searchInfoEl.innerHTML = `正在显示您的 <strong>${favoriteIds.length}</strong> 篇收藏：`;
-            showSkeletonLoader(Math.min(favoriteIds.length, 5));
-            
-            const requiredMonths = new Set(favoriteIds.map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
-            await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
-            
-            hideSkeletonLoader();
-            const results = favoriteIds.map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
-            renderInChunks(results, searchResultsContainer);
+        function loadViewMode() { const savedMode = localStorage.getItem('arxiv_view_mode') || 'detailed'; state.viewMode = savedMode; mainContainer.className = `${savedMode}-view`; }
+        function toggleViewMode(mode) {
+            if (state.viewMode === mode) return;
+            applyViewTransition(() => {
+                state.viewMode = mode;
+                localStorage.setItem('arxiv_view_mode', mode);
+                mainContainer.className = `${mode}-view`;
+                updateViewModeUI();
+            }, 'view-toggle');
+        }
+        function updateViewModeUI() {
+            document.getElementById('view-detailed-btn')?.classList.toggle('active', state.viewMode === 'detailed');
+            document.getElementById('view-compact-btn')?.classList.toggle('active', state.viewMode === 'compact');
         }
 
-        // --- 核心逻辑：状态切换与导航 ---
         async function navigateToMonth(month) {
             const targetIndex = state.manifest.availableMonths.indexOf(month);
             if (targetIndex === -1) return;
@@ -491,55 +387,69 @@
                 const nextMonth = state.manifest.availableMonths[nextIndex];
                 await fetchMonth(nextMonth);
                 const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(nextMonth.replace('-', '').substring(2)));
-                renderPapers(papersInMonth, nextMonth, papersContainer);
+                renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), nextMonth, papersContainer);
             } else {
                 if (loader) loader.classList.add('hidden');
                 if (endOfListMessage && triggeredByScroll) endOfListMessage.classList.remove('hidden');
             }
         }
-
+        
         async function handleSearch() {
             const query = searchInput.value.trim();
-            state.currentQuery = query;
-            const url = new URL(window.location);
-            query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
-            history.pushState({}, '', url);
+            await applyViewTransition(async () => {
+                state.currentQuery = query;
+                const url = new URL(window.location);
+                query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
+                history.pushState({}, '', url);
 
-            if (!query) { resetToDefaultView(); return; }
-            if (query === 'favorites') { await showFavorites(); return; }
-            
-            state.isSearchMode = true;
-            papersContainer.classList.add('hidden');
-            searchResultsContainer.classList.remove('hidden');
-            searchResultsContainer.innerHTML = '';
-            quickNavContainer.style.display = 'none';
-            endOfListMessage.classList.add('hidden');
-            searchInfoEl.classList.remove('hidden');
-            showSkeletonLoader();
+                if (!query) { resetToDefaultView(); return; }
+                
+                state.isSearchMode = true;
+                papersContainer.classList.add('hidden');
+                searchResultsContainer.classList.remove('hidden');
+                searchResultsContainer.innerHTML = '';
+                quickNavContainer.style.display = 'none';
+                searchInfoEl.classList.remove('hidden');
+                showSkeletonLoader();
 
-            try {
-                if (!state.categoryIndex) state.categoryIndex = await (await fetch('./data/category_index.json')).json();
-                if (!state.searchIndex) state.searchIndex = await (await fetch('./data/search_index.json')).json();
-            } catch(error) { hideSkeletonLoader(); searchResultsContainer.innerHTML = `<p class="text-center text-red-500">索引文件加载失败: ${error.message}。</p>`; return; }
+                let results = [], infoText = '';
 
-            let matchingIds;
-            if (state.categoryIndex[query]) { matchingIds = new Set(state.categoryIndex[query]); } 
-            else { matchingIds = new Set(); const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean); queryTokens.forEach((token, index) => { const foundIds = new Set(); for (const key in state.searchIndex) { if (key.includes(token)) state.searchIndex[key].forEach(id => foundIds.add(id)); } if (index === 0) matchingIds = foundIds; else matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id))); }); }
+                if (query === 'favorites') {
+                    const favoriteIds = Array.from(state.favorites);
+                    if (favoriteIds.length > 0) {
+                        const requiredMonths = new Set(favoriteIds.map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
+                        await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
+                        results = favoriteIds.map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+                    }
+                    infoText = `正在显示您的 <strong>${results.length}</strong> 篇收藏：`;
+                    if (results.length === 0) searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">点击论文卡片右上角的<svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>图标来添加收藏。</p>`;
+                
+                } else {
+                    try {
+                        if (!state.categoryIndex) state.categoryIndex = await (await fetch('./data/category_index.json')).json();
+                        if (!state.searchIndex) state.searchIndex = await (await fetch('./data/search_index.json')).json();
+                    } catch(error) { hideSkeletonLoader(); searchResultsContainer.innerHTML = `<p class="text-center text-red-500">索引文件加载失败: ${error.message}。</p>`; return; }
 
-            const requiredMonths = new Set([...matchingIds].map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
-            await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
+                    let matchingIds;
+                    if (state.categoryIndex[query]) { matchingIds = new Set(state.categoryIndex[query]); } 
+                    else { matchingIds = new Set(); const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean); queryTokens.forEach((token, index) => { const foundIds = new Set(); for (const key in state.searchIndex) { if (key.includes(token)) state.searchIndex[key].forEach(id => foundIds.add(id)); } if (index === 0) matchingIds = foundIds; else matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id))); }); }
 
-            hideSkeletonLoader();
-            const results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
-            searchInfoEl.innerHTML = `为您找到 <strong>${results.length}</strong> 篇关于 "<strong>${query}</strong>" 的论文：`;
-            if(results.length > 0) { renderInChunks(results, searchResultsContainer); } 
-            else { searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">未找到相关论文。您可以尝试其他关键词，或清空搜索框返回主列表。</p>`; }
+                    const requiredMonths = new Set([...matchingIds].map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
+                    await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
+                    results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+                    infoText = `为您找到 <strong>${results.length}</strong> 篇关于 "<strong>${query}</strong>" 的论文：`;
+                    if (results.length === 0) searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">未找到相关论文。您可以尝试其他关键词，或清空搜索框返回主列表。</p>`;
+                }
+                
+                hideSkeletonLoader();
+                searchInfoEl.innerHTML = infoText;
+                if(results.length > 0) { renderInChunks(results, searchResultsContainer); }
+            });
         }
         
         function resetToDefaultView() {
             state.isSearchMode = false;
             searchInput.value = ''; state.currentQuery = '';
-            history.pushState({}, '', window.location.pathname);
             searchResultsContainer.classList.add('hidden');
             papersContainer.classList.remove('hidden');
             quickNavContainer.style.display = 'block';
@@ -549,7 +459,6 @@
 
         function performTagSearch(tag) { window.scrollTo(0, 0); searchInput.value = tag; handleSearch(); };
 
-        // --- 事件监听 ---
         function setupIntersectionObserver() {
             const options = { root: null, rootMargin: '0px', threshold: 0.1 };
             const observer = new IntersectionObserver((entries, observer) => { entries.forEach(entry => { if (entry.isIntersecting && !state.isFetching && !state.isSearchMode) { loadNextMonth(); } }); }, options);
@@ -568,7 +477,6 @@
 
         window.addEventListener('resize', updateSearchStickiness);
         
-        // --- 启动 ---
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
