@@ -123,6 +123,30 @@
             padding: 1px 2px;
             border-radius: 3px;
         }
+        /* 新增：“返回顶部”按钮样式 */
+        .back-to-top-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background-color: rgba(59, 130, 246, 0.8); /* blue-500 with opacity */
+            color: white;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(100px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 50;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .back-to-top-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -139,14 +163,16 @@
             <nav id="quick-nav" class="quick-nav px-4"></nav>
         </div>
 
-        <!-- 修改：调整搜索框的 sticky top 值以适应导航栏 -->
-        <div class="sticky top-[78px] z-10 mb-8">
+        <!-- 修改：搜索框的 sticky top 值现在由JS动态设定 -->
+        <div id="search-bar-container" class="sticky z-10 mb-8" style="top: var(--nav-height, 8px);">
             <input type="text" id="searchInput" placeholder="搜索论文或点击分类/关键词进行筛选..." 
                    class="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
         </div>
-
-        <main id="papers-container" class="space-y-8">
-            <!-- 论文卡片将动态插入这里 -->
+        
+        <!-- 核心架构升级：双容器 -->
+        <main>
+            <div id="papers-container" class="space-y-8"></div>
+            <div id="search-results-container" class="space-y-8 hidden"></div>
         </main>
 
         <div id="loader" class="flex justify-center items-center py-8 hidden">
@@ -156,36 +182,36 @@
         <div id="end-of-list-message" class="text-center py-8 text-gray-500 hidden">
             <p>已加载全部内容</p>
         </div>
-
+    </div>
+    
+    <!-- 新增：“返回顶部”按钮HTML -->
+    <div id="back-to-top" class="back-to-top-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+        </svg>
     </div>
 
     <script>
         // --- 全局状态管理 ---
         const state = {
-            manifest: null, 
-            searchIndex: null, 
-            categoryIndex: null, // 新增: 分类索引
-            allPapers: new Map(),
-            loadedMonths: new Set(), currentMonthIndex: 0,
-            isFetching: false, isSearchMode: false,
-            navObserver: null, // 新增: 导航高亮观察者
-            currentQuery: '' // 新增: 当前搜索词
+            manifest: null, searchIndex: null, categoryIndex: null, allPapers: new Map(),
+            loadedMonths: new Set(), currentMonthIndex: -1, isFetching: false, isSearchMode: false,
+            navObserver: null, currentQuery: ''
         };
 
         // --- DOM 元素引用 ---
         const papersContainer = document.getElementById('papers-container');
+        const searchResultsContainer = document.getElementById('search-results-container');
         const searchInput = document.getElementById('searchInput');
         const loader = document.getElementById('loader');
         const endOfListMessage = document.getElementById('end-of-list-message');
-        const quickNav = document.getElementById('quick-nav'); // 新增: 导航栏引用
+        const quickNavContainer = document.getElementById('quick-nav-container');
+        const searchBarContainer = document.getElementById('search-bar-container');
+        const backToTopBtn = document.getElementById('back-to-top');
 
         // --- 工具函数 ---
-        function escapeCQ(str) {
-            return str ? String(str).replace(/'/g, "\\'") : '';
-        }
-        function escapeRegex(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        }
+        function escapeCQ(str) { return str ? String(str).replace(/'/g, "\\'") : ''; }
+        function escapeRegex(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
         // --- 核心功能 ---
         async function init() {
@@ -194,18 +220,20 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 state.manifest = await response.json();
                 
-                // 新增：URL状态管理 - 页面加载时检查URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const queryFromUrl = urlParams.get('q');
 
                 if (state.manifest.availableMonths && state.manifest.availableMonths.length > 0) {
                     setupQuickNav();
+                    updateSearchStickiness();
                     setupNavObserver();
+                    setupBackToTopButton();
+
                     if (queryFromUrl) {
                         searchInput.value = queryFromUrl;
-                        handleSearch();
+                        await handleSearch();
                     } else {
-                        await fetchAndRenderMonth(state.manifest.availableMonths[0]);
+                        await loadNextMonth(false); // 初始加载第一个月
                     }
                 } else {
                      papersContainer.innerHTML = `<p class="text-center text-gray-500">数据清单为空。</p>`;
@@ -217,7 +245,7 @@
             }
         }
 
-        // --- 新增：设置快速导航 ---
+        // --- UI/UX 功能 ---
         function setupQuickNav() {
             const monthsByYear = state.manifest.availableMonths.reduce((acc, month) => {
                 const year = month.substring(0, 4);
@@ -225,10 +253,8 @@
                 acc[year].push(month);
                 return acc;
             }, {});
-
             let navHTML = '';
             const sortedYears = Object.keys(monthsByYear).sort((a, b) => b - a);
-
             sortedYears.forEach(year => {
                 navHTML += `<div class="year-group"><span class="year-label">${year}</span>`;
                 monthsByYear[year].forEach(month => {
@@ -237,10 +263,9 @@
                 });
                 navHTML += `</div>`;
             });
-            quickNav.innerHTML = navHTML;
+            quickNavContainer.querySelector('#quick-nav').innerHTML = navHTML;
         }
 
-        // --- 新增：设置导航高亮观察者 ---
         function setupNavObserver() {
             const options = { rootMargin: '-40% 0px -60% 0px', threshold: 0 };
             state.navObserver = new IntersectionObserver((entries) => {
@@ -254,25 +279,28 @@
                 });
             }, options);
         }
-        
-        // --- 新增：导航到指定月份 ---
-        async function navigateToMonth(month) {
-            const targetIndex = state.manifest.availableMonths.indexOf(month);
-            if (targetIndex === -1) return;
 
-            while (state.currentMonthIndex < targetIndex) {
-                if (state.isFetching) await new Promise(resolve => setTimeout(resolve, 100));
-                await loadNextMonth(false);
-            }
-            
-            const anchor = document.getElementById(`month-anchor-${month}`);
-            if (anchor) {
-                anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+        function setupBackToTopButton() {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            });
+            backToTopBtn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+        
+        function updateSearchStickiness() {
+            const navHeight = quickNavContainer.offsetHeight;
+            searchBarContainer.style.top = `${navHeight}px`;
         }
 
-        async function fetchAndRenderMonth(month) {
-            if (state.loadedMonths.has(month) || state.isFetching) return;
+        // --- 核心逻辑：数据加载与渲染 ---
+        async function fetchAndRenderMonth(month, targetContainer) {
+            if (state.loadedMonths.has(month) || state.isFetching) return [];
             state.isFetching = true;
             loader.classList.remove('hidden');
             try {
@@ -284,109 +312,69 @@
                         state.allPapers.set(paper.id, paper);
                     }
                 });
-                if (!state.isSearchMode) renderPapers(papers, month);
                 state.loadedMonths.add(month);
+                if (!state.isSearchMode) {
+                    renderPapers(papers, month, targetContainer);
+                }
+                return papers;
             } catch (error) {
                 console.error(`Failed to load data for month ${month}:`, error);
+                return [];
             } finally {
                 state.isFetching = false;
                 loader.classList.add('hidden');
             }
         }
 
-        // --- 性能优化：重构 renderPapers 和引入 renderInChunks ---
-        function renderPapers(papers, month = null) {
-            const container = document.createDocumentFragment();
+        function renderPapers(papers, month = null, targetContainer) {
             if (month && !state.isSearchMode) {
                 const monthAnchor = document.createElement('div');
                 monthAnchor.id = `month-anchor-${month}`;
                 monthAnchor.dataset.monthAnchor = month;
-                container.appendChild(monthAnchor);
+                targetContainer.appendChild(monthAnchor);
                 state.navObserver.observe(monthAnchor);
             }
-            
-            papersContainer.appendChild(container); // 先插入锚点
-            renderInChunks(papers); // 然后分块渲染内容
+            renderInChunks(papers, targetContainer);
         }
 
-        function renderInChunks(papers, index = 0) {
-            const CHUNK_SIZE = 10; // 每次渲染10篇，以保持UI流畅
-            if (index >= papers.length) return; // 渲染完成
-
+        function renderInChunks(papers, container, index = 0) {
+            const CHUNK_SIZE = 10;
+            if (index >= papers.length) return;
             const fragment = document.createDocumentFragment();
             const endIndex = Math.min(index + CHUNK_SIZE, papers.length);
-
             for (let i = index; i < endIndex; i++) {
-                const paper = papers[i];
-                if (paper && paper.id) {
-                    try {
-                        const card = createPaperCard(paper);
-                        fragment.appendChild(card);
-                    } catch (e) {
-                        console.error(`Error creating card for paper #${paper.id} at index ${i}:`, paper, e);
-                    }
+                if (papers[i] && papers[i].id) {
+                    fragment.appendChild(createPaperCard(papers[i]));
                 }
             }
-            papersContainer.appendChild(fragment);
-
-            // 使用 requestAnimationFrame 调度下一次渲染，让浏览器有机会重绘
-            requestAnimationFrame(() => renderInChunks(papers, endIndex));
+            container.appendChild(fragment);
+            requestAnimationFrame(() => renderInChunks(papers, container, endIndex));
         }
 
         function createPaperCard(paper) {
             const card = document.createElement('article');
             card.className = 'paper-card bg-white p-6 rounded-lg shadow-md border border-gray-200';
-            
             let title = paper.title || '无标题';
             let abstract = paper.abstract || '无';
 
-            // 新增：高亮搜索词
             if (state.isSearchMode && state.currentQuery && !state.categoryIndex[state.currentQuery]) {
                 const queryTerms = state.currentQuery.toLowerCase().split(/\s+/).filter(Boolean);
                 const regex = new RegExp(queryTerms.map(escapeRegex).join('|'), 'gi');
                 title = title.replace(regex, match => `<span class="highlight">${match}</span>`);
                 abstract = abstract.replace(regex, match => `<span class="highlight">${match}</span>`);
             }
-
-            let keywordsHTML = '无'; 
-            if (paper.keywords && Array.isArray(paper.keywords) && paper.keywords.length > 0) {
-                const validKeywords = paper.keywords.filter(kw => typeof kw === 'string' && kw.trim() !== '');
-                if (validKeywords.length > 0) {
-                    keywordsHTML = validKeywords.map(kw => 
-                        `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performTagSearch('${escapeCQ(kw)}')">${kw}</span>`
-                    ).join('');
-                }
-            }
             
-            const categoriesHTML = (paper.categories && Array.isArray(paper.categories))
-                ? paper.categories.map(cat => `<span class="keyword-tag inline-block bg-gray-100 text-gray-600 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performTagSearch('${escapeCQ(cat)}')">${cat}</span>`).join('')
-                : '';
+            let keywordsHTML = (paper.keywords && paper.keywords.length > 0) 
+                ? paper.keywords.map(kw => `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performTagSearch('${escapeCQ(kw)}')">${kw}</span>`).join('') 
+                : '无';
+            
+            const categoriesHTML = (paper.categories && paper.categories.length > 0)
+                ? paper.categories.map(cat => `<span class="keyword-tag inline-block bg-gray-100 text-gray-600 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performTagSearch('${escapeCQ(cat)}')">${cat}</span>`).join('') : '';
             
             const absUrl = paper.id ? `https://arxiv.org/abs/${paper.id}` : '#';
             const pdfUrl = paper.id ? `https://arxiv.org/pdf/${paper.id}` : '#';
-            const createInfoBox = (title, content, color) => {
-                if (!content) return '';
-                return `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800">${title}:</p><p class="text-${color}-700">${content}</p></div>`;
-            };
-            const commentHTML = createInfoBox('Comment', paper.comment, 'yellow');
-            const tldrHTML = createInfoBox('TL;DR', paper.tldr, 'green');
-            const aiCommentsHTML = createInfoBox('AI点评', paper.comments, 'indigo');
-
-            const aiAnalysisHTML = `
-                <div id="ai-details-${paper.id}" class="details-section ai-details-section">
-                    <h2 class="text-2xl font-bold mb-4 text-gray-800">AI分析与摘要</h2>
-                    ${paper.motivation ? `<h3>研究动机</h3><p>${paper.motivation}</p><br/>` : ''}
-                    ${paper.method ? `<h3>研究方法</h3><p>${paper.method}</p><br/>` : ''}
-                    ${paper.results ? `<h3>研究结果</h3><p>${paper.results}</p><br/>` : ''}
-                    ${paper.conclusion ? `<h3>研究结论</h3><p>${paper.conclusion}</p><br/>` : ''}
-                    <h3>摘要翻译</h3>
-                    <p>${paper.translation || '无'}</p>
-                    <br/>
-                    <h3>原文摘要</h3>
-                    <p>${abstract}</p>
-                </div>
-            `;
-
+            const createInfoBox = (title, content, color) => !content ? '' : `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800">${title}:</p><p class="text-${color}-700">${content}</p></div>`;
+            
             card.innerHTML = `
                 <p class="text-sm text-gray-500 mb-2">${paper.date || '未知日期'} ${categoriesHTML ? '| ' : ''}${categoriesHTML}</p> 
                 <h2 class="text-2xl font-bold mb-2 text-gray-900">${title}</h2>
@@ -395,85 +383,81 @@
                     <p><strong>作者:</strong> ${paper.authors || '未知作者'}</p>
                     <p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p>
                 </div>
-                ${commentHTML} ${tldrHTML} ${aiCommentsHTML}
+                ${createInfoBox('Comment', paper.comment, 'yellow')}
+                ${createInfoBox('TL;DR', paper.tldr, 'green')}
+                ${createInfoBox('AI点评', paper.comments, 'indigo')}
                 <div class="flex items-center space-x-4 mb-4">
                     <a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页 (Abs)</a>
                     <a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a>
                     <button onclick="toggleAIDetails('${paper.id}')" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition">显示/隐藏AI分析</button>
                 </div>
-                ${aiAnalysisHTML}
-            `;
+                <div id="ai-details-${paper.id}" class="details-section ai-details-section">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-800">AI分析与摘要</h2>
+                    ${paper.motivation ? `<h3>研究动机</h3><p>${paper.motivation}</p><br/>` : ''}
+                    ${paper.method ? `<h3>研究方法</h3><p>${paper.method}</p><br/>` : ''}
+                    ${paper.results ? `<h3>研究结果</h3><p>${paper.results}</p><br/>` : ''}
+                    ${paper.conclusion ? `<h3>研究结论</h3><p>${paper.conclusion}</p><br/>` : ''}
+                    <h3>摘要翻译</h3><p>${paper.translation || '无'}</p><br/>
+                    <h3>原文摘要</h3><p>${abstract}</p>
+                </div>`;
             return card;
         }
 
         function toggleAIDetails(paperId) {
             const detailsSection = document.getElementById(`ai-details-${paperId}`);
-            if (detailsSection) {
-                detailsSection.classList.toggle('expanded');
-            }
+            if (detailsSection) detailsSection.classList.toggle('expanded');
         }
         
-        function setupIntersectionObserver() {
-            const options = { root: null, rootMargin: '0px', threshold: 0.5 };
-            const callback = (entries, observer) => { entries.forEach(entry => { if (entry.isIntersecting && !state.isFetching && !state.isSearchMode) { loadNextMonth(); } }); };
-            const observer = new IntersectionObserver(callback, options);
-            if (loader) observer.observe(loader);
-        };
-        
+        // --- 核心逻辑：状态切换与导航 ---
+        async function navigateToMonth(month) {
+            const targetIndex = state.manifest.availableMonths.indexOf(month);
+            if (targetIndex === -1) return;
+            while (state.currentMonthIndex < targetIndex) {
+                await loadNextMonth(false);
+            }
+            const anchor = document.getElementById(`month-anchor-${month}`);
+            if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         async function loadNextMonth(triggeredByScroll = true) {
             if (state.isFetching || state.isSearchMode) return;
             if (state.manifest && state.manifest.availableMonths && state.currentMonthIndex + 1 < state.manifest.availableMonths.length) {
                 state.currentMonthIndex++;
                 const nextMonth = state.manifest.availableMonths[state.currentMonthIndex];
-                await fetchAndRenderMonth(nextMonth);
+                await fetchAndRenderMonth(nextMonth, papersContainer);
             } else {
                 if(loader) loader.classList.add('hidden');
                 if(endOfListMessage && triggeredByScroll) endOfListMessage.classList.remove('hidden');
             }
         };
-        
-        // --- 重大升级：handleSearch, 包含URL状态管理和逻辑优化 ---
+
         async function handleSearch() {
             const query = searchInput.value.trim();
-            state.currentQuery = query; // 保存当前查询，用于高亮
+            state.currentQuery = query;
             
-            // 更新URL
             const url = new URL(window.location);
-            if (query) {
-                url.searchParams.set('q', query);
-            } else {
-                url.searchParams.delete('q');
-            }
+            query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
             history.pushState({}, '', url);
-
-            document.getElementById('quick-nav-container').style.display = query ? 'none' : 'block';
 
             if (!query) {
                 resetToDefaultView();
                 return;
             }
 
-            state.isSearchMode = true; 
+            state.isSearchMode = true;
+            papersContainer.classList.add('hidden');
+            searchResultsContainer.classList.remove('hidden');
+            searchResultsContainer.innerHTML = '';
+            quickNavContainer.style.display = 'none';
+            endOfListMessage.classList.add('hidden');
             loader.classList.remove('hidden');
-            papersContainer.innerHTML = '';
-            if(state.navObserver) state.navObserver.disconnect();
 
             try {
-                if (!state.categoryIndex) {
-                    const catResponse = await fetch('./data/category_index.json');
-                    if (!catResponse.ok) throw new Error('Category index not found');
-                    state.categoryIndex = await catResponse.json();
-                }
-                if (!state.searchIndex) {
-                    const searchResponse = await fetch('./data/search_index.json');
-                    if (!searchResponse.ok) throw new Error('Search index not found');
-                    state.searchIndex = await searchResponse.json();
-                }
+                if (!state.categoryIndex) state.categoryIndex = await (await fetch('./data/category_index.json')).json();
+                if (!state.searchIndex) state.searchIndex = await (await fetch('./data/search_index.json')).json();
             } catch(error) {
-                console.error("Index loading failed:", error);
-                papersContainer.innerHTML = `<p class="text-center text-red-500">索引文件加载失败: ${error.message}。请确保文件存在。</p>`;
-                loader.classList.add('hidden');
-                return;
+                searchResultsContainer.innerHTML = `<p class="text-center text-red-500">索引文件加载失败: ${error.message}。</p>`;
+                loader.classList.add('hidden'); return;
             }
 
             let matchingIds = new Set();
@@ -484,71 +468,56 @@
                 queryTokens.forEach((token, index) => {
                     const foundIds = new Set();
                     for (const key in state.searchIndex) { 
-                        if (key.includes(token)) { state.searchIndex[key].forEach(id => foundIds.add(id)); } 
+                        if (key.includes(token)) state.searchIndex[key].forEach(id => foundIds.add(id)); 
                     }
-                    if (index === 0) { matchingIds = foundIds; } 
-                    else { matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id))); }
+                    if (index === 0) matchingIds = foundIds;
+                    else matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id)));
                 });
             }
 
-            const requiredMonths = new Set();
-            matchingIds.forEach(id => { 
-                const month = `20${id.substring(0, 2)}-${id.substring(2, 4)}`; 
-                if (!state.loadedMonths.has(month)) { requiredMonths.add(month); } 
-            });
-            await Promise.all(Array.from(requiredMonths).map(month => fetchAndRenderMonth(month)));
+            const requiredMonths = new Set([...matchingIds].map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
+            await Promise.all(Array.from(requiredMonths).map(month => fetchAndRenderMonth(month, searchResultsContainer)));
 
             const results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
-            if(results.length > 0){ 
-                renderPapers(results, null);
+            if(results.length > 0){
+                renderPapers(results, null, searchResultsContainer);
             } else { 
-                papersContainer.innerHTML = `<p class="text-center text-gray-500">未找到与 "${query}" 相关的论文。</p>`; 
+                searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">未找到与 "${query}" 相关的论文。您可以尝试其他关键词，或清空搜索框返回主列表。</p>`; 
             }
             loader.classList.add('hidden');
         };
         
-        // 新增：重置视图函数
         function resetToDefaultView() {
             state.isSearchMode = false;
-            papersContainer.innerHTML = '';
-            endOfListMessage.classList.add('hidden');
-            if (state.navObserver) state.navObserver.disconnect();
-            setupNavObserver(); // 重新启用导航观察者
-
-            // 重新渲染已加载的数据
-            const loadedMonthsInOrder = state.manifest.availableMonths.filter(m => state.loadedMonths.has(m));
-            if (loadedMonthsInOrder.length === 0) { // 如果什么都没加载过
-                fetchAndRenderMonth(state.manifest.availableMonths[0]);
-            } else {
-                for (const month of loadedMonthsInOrder) {
-                    const papersForMonth = Array.from(state.allPapers.values())
-                        .filter(p => p.id.startsWith(month.replace('-', '').substring(2)))
-                        .sort((a,b) => b.date.localeCompare(a.date));
-                    renderPapers(papersForMonth, month);
-                }
-            }
+            searchResultsContainer.classList.add('hidden');
+            papersContainer.classList.remove('hidden');
+            quickNavContainer.style.display = 'block';
+            updateSearchStickiness();
         }
 
-        // --- 统一的标签搜索函数 ---
         function performTagSearch(tag) {
             searchInput.value = tag; 
             handleSearch(); 
             window.scrollTo(0, 0);
         };
 
+        // --- 事件监听 ---
         let searchTimeout;
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(handleSearch, 300);
         });
         
-        // 监听浏览器前进/后退
         window.addEventListener('popstate', () => {
             const urlParams = new URLSearchParams(window.location.search);
             searchInput.value = urlParams.get('q') || '';
             handleSearch();
         });
 
+        // 动态调整搜索框吸顶位置
+        window.addEventListener('resize', updateSearchStickiness);
+        
+        // --- 启动 ---
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
