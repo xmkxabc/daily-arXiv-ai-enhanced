@@ -226,11 +226,8 @@
 
         function setupBackToTopButton() {
             window.addEventListener('scroll', () => {
-                if (window.scrollY > 300) {
-                    backToTopBtn.classList.add('visible');
-                } else {
-                    backToTopBtn.classList.remove('visible');
-                }
+                if (window.scrollY > 300) { backToTopBtn.classList.add('visible'); } 
+                else { backToTopBtn.classList.remove('visible'); }
             });
             backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
         }
@@ -260,7 +257,6 @@
             if (state.loadedMonths.has(month)) return;
             if (state.isFetching) { await new Promise(res => setTimeout(res, 50)); return fetchMonth(month); }
             state.isFetching = true;
-            loader.classList.remove('hidden');
             try {
                 const response = await fetch(`./data/database-${month}.json`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -268,14 +264,11 @@
                 papers.forEach(paper => { if (paper && paper.id && !state.allPapers.has(paper.id)) state.allPapers.set(paper.id, paper); });
                 state.loadedMonths.add(month);
             } catch (error) { console.error(`Failed to load data for month ${month}:`, error); } 
-            finally {
-                state.isFetching = false;
-                loader.classList.add('hidden');
-            }
+            finally { state.isFetching = false; }
         }
 
         function renderPapers(papers, month = null, targetContainer) {
-            if (month && !state.isSearchMode) {
+            if (month && !state.isSearchMode && !document.getElementById(`month-anchor-${month}`)) {
                 const monthAnchor = document.createElement('div');
                 monthAnchor.id = `month-anchor-${month}`;
                 monthAnchor.dataset.monthAnchor = month;
@@ -322,7 +315,8 @@
             const isFavorited = state.favorites.has(paper.id);
             const aiAnalysisHTML = `<div id="ai-details-${paper.id}" class="details-section ai-details-section compact-hidden">...</div>`;
 
-            card.innerHTML = `<div class="flex justify-between items-start"><p class="text-sm text-gray-500 mb-2 flex-grow">${paper.date||'未知日期'} ${categoriesHTML?'| ':''}${categoriesHTML}</p><button onclick="toggleFavorite(event, '${paper.id}')" title="收藏/取消收藏" class="favorite-btn ${isFavorited?'favorited':''}"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></button></div><h2 class="text-2xl font-bold mb-2 text-gray-900">${title}</h2><h3 class="text-xl font-semibold mb-3 text-blue-700">${paper.zh_title||''}</h3><div class="text-sm text-gray-600 mb-3 compact-hidden"><p><strong>作者:</strong> ${paper.authors||'未知作者'}</p><p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p></div><div class="compact-hidden">${createInfoBox('Comment',paper.comment,'yellow')}${createInfoBox('TL;DR',paper.tldr,'green')}${createInfoBox('AI点评',paper.comments,'indigo')}</div><div class="flex items-center space-x-4 mt-4"><a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页</a><a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a><button onclick="toggleAIDetails('${paper.id}')" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition compact-hidden">AI分析</button></div>${aiAnalysisHTML}`;
+            // 修复3: 响应式字体大小
+            card.innerHTML = `<div class="flex justify-between items-start"><p class="text-sm text-gray-500 mb-2 flex-grow">${paper.date||'未知日期'} ${categoriesHTML?'| ':''}${categoriesHTML}</p><button onclick="toggleFavorite(event, '${paper.id}')" title="收藏/取消收藏" class="favorite-btn ${isFavorited?'favorited':''}"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></button></div><h2 class="text-xl md:text-2xl font-bold mb-2 text-gray-900">${title}</h2><h3 class="text-lg md:text-xl font-semibold mb-3 text-blue-700">${paper.zh_title||''}</h3><div class="text-sm text-gray-600 mb-3 compact-hidden"><p><strong>作者:</strong> ${paper.authors||'未知作者'}</p><p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p></div><div class="compact-hidden">${createInfoBox('Comment',paper.comment,'yellow')}${createInfoBox('TL;DR',paper.tldr,'green')}${createInfoBox('AI点评',paper.comments,'indigo')}</div><div class="flex items-center space-x-4 mt-4"><a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页</a><a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a><button onclick="toggleAIDetails('${paper.id}')" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition compact-hidden">AI分析</button></div>${aiAnalysisHTML}`;
             card.querySelector('.ai-details-section').innerHTML = `<h2 class="text-2xl font-bold mb-4 text-gray-800">AI分析与摘要</h2>${paper.motivation?`<h3>研究动机</h3><p>${paper.motivation}</p><br/>`:''}${paper.method?`<h3>研究方法</h3><p>${paper.method}</p><br/>`:''}${paper.results?`<h3>研究结果</h3><p>${paper.results}</p><br/>`:''}${paper.conclusion?`<h3>研究结论</h3><p>${paper.conclusion}</p><br/>`:''}<h3>摘要翻译</h3><p>${paper.translation||'无'}</p><br/><h3>原文摘要</h3><p>${abstract}</p>`;
 
             return card;
@@ -336,8 +330,7 @@
         function loadFavorites() { const favs = localStorage.getItem('arxiv_favorites'); if (favs) { try { state.favorites = new Set(JSON.parse(favs)); } catch (e) { state.favorites = new Set(); } } }
         function saveFavorites() { localStorage.setItem('arxiv_favorites', JSON.stringify(Array.from(state.favorites))); }
         function toggleFavorite(event, paperId) {
-            event.stopPropagation();
-            const btn = event.currentTarget;
+            event.stopPropagation(); const btn = event.currentTarget;
             const update = () => {
                 if (state.favorites.has(paperId)) {
                     state.favorites.delete(paperId); btn.classList.remove('favorited');
@@ -348,12 +341,9 @@
                 saveFavorites();
                 document.getElementById('favorites-count').textContent = state.favorites.size;
             }
-            // 只有在收藏夹视图中移除时才应用过渡
             if (state.currentQuery === 'favorites' && state.favorites.has(paperId)) {
                 applyViewTransition(update, 'fav-remove');
-            } else {
-                update();
-            }
+            } else { update(); }
         }
         
         function loadViewMode() { const savedMode = localStorage.getItem('arxiv_view_mode') || 'detailed'; state.viewMode = savedMode; mainContainer.className = `${savedMode}-view`; }
@@ -371,10 +361,32 @@
             document.getElementById('view-compact-btn')?.classList.toggle('active', state.viewMode === 'compact');
         }
 
+        // --- 核心逻辑：状态切换与导航 (已修复) ---
         async function navigateToMonth(month) {
             const targetIndex = state.manifest.availableMonths.indexOf(month);
             if (targetIndex === -1) return;
-            while (state.currentMonthIndex < targetIndex) { await loadNextMonth(false); }
+            // 修复2：加载所有需要的月份，并按顺序渲染
+            loader.classList.remove('hidden');
+            const monthsToLoad = [];
+            for(let i = 0; i <= targetIndex; i++) {
+                const m = state.manifest.availableMonths[i];
+                if (!state.loadedMonths.has(m)) {
+                    monthsToLoad.push(m);
+                }
+            }
+            await Promise.all(monthsToLoad.map(m => fetchMonth(m)));
+            
+            // 确保渲染是按顺序的
+            papersContainer.innerHTML = '';
+            for(let i = 0; i <= targetIndex; i++) {
+                const m = state.manifest.availableMonths[i];
+                const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(m.replace('-', '').substring(2)));
+                renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), m, papersContainer);
+            }
+            state.currentMonthIndex = targetIndex;
+            loader.classList.add('hidden');
+
+            // 滚动到目标
             const anchor = document.getElementById(`month-anchor-${month}`);
             if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -383,11 +395,14 @@
             if (state.isFetching || state.isSearchMode) return;
             const nextIndex = state.currentMonthIndex + 1;
             if (state.manifest && state.manifest.availableMonths && nextIndex < state.manifest.availableMonths.length) {
+                // 修复1：确保串行加载和渲染
+                loader.classList.remove('hidden');
                 state.currentMonthIndex = nextIndex;
                 const nextMonth = state.manifest.availableMonths[nextIndex];
                 await fetchMonth(nextMonth);
                 const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(nextMonth.replace('-', '').substring(2)));
                 renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), nextMonth, papersContainer);
+                loader.classList.add('hidden');
             } else {
                 if (loader) loader.classList.add('hidden');
                 if (endOfListMessage && triggeredByScroll) endOfListMessage.classList.remove('hidden');
@@ -395,8 +410,8 @@
         }
         
         async function handleSearch() {
-            const query = searchInput.value.trim();
             await applyViewTransition(async () => {
+                const query = searchInput.value.trim();
                 state.currentQuery = query;
                 const url = new URL(window.location);
                 query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
