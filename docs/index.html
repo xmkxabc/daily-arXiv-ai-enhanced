@@ -79,8 +79,8 @@
         /* --- 新增：快速导航栏 CSS --- */
         .quick-nav-container {
             background-color: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
             border-bottom: 1px solid #e5e7eb;
         }
         .quick-nav .year-group {
@@ -274,31 +274,45 @@
             }
         }
 
-        // 修改：renderPapers 接受月份参数以创建锚点
+                // 新的 renderPapers 函数，它会立即创建锚点，然后调用分块渲染
         function renderPapers(papers, month) {
-            const fragment = document.createDocumentFragment();
-            
-            // 如果是在非搜索模式下，为每个月添加一个锚点
             if (month && !state.isSearchMode) {
                 const monthAnchor = document.createElement('div');
                 monthAnchor.id = `month-anchor-${month}`;
-                monthAnchor.dataset.monthAnchor = month; 
-                fragment.appendChild(monthAnchor);
-                state.navObserver.observe(monthAnchor);
+                monthAnchor.dataset.monthAnchor = month;
+                papersContainer.appendChild(monthAnchor);
+                if (state.navObserver) {
+                    state.navObserver.observe(monthAnchor);
+                }
             }
+            renderInChunks(papers);
+        }
 
-            papers.forEach((paper, index) => {
+        // 新的辅助函数，它将渲染工作分解成小块
+        function renderInChunks(papers, index = 0) {
+            const CHUNK_SIZE = 15; // 每次渲染15篇论文
+            const fragment = document.createDocumentFragment();
+            const endIndex = Math.min(index + CHUNK_SIZE, papers.length);
+
+            for (let i = index; i < endIndex; i++) {
+                const paper = papers[i];
                 if (paper && paper.id) {
                     try {
                         const card = createPaperCard(paper);
                         fragment.appendChild(card);
                     } catch (e) {
-                        console.error(`Error creating card for paper #${paper.id} at index ${index}:`, paper, e);
+                        console.error(`Error creating card for paper #${paper.id} at index ${i}:`, paper, e);
                     }
                 }
-            });
+            }
             papersContainer.appendChild(fragment);
+
+            if (endIndex < papers.length) {
+                requestAnimationFrame(() => renderInChunks(papers, endIndex));
+            }
         }
+
+
 
         function createPaperCard(paper) {
             const card = document.createElement('article');
@@ -408,14 +422,19 @@
 
             if (!query) {
                 state.isSearchMode = false;
+                document.getElementById('quick-nav-container').style.display = 'block';
                 papersContainer.innerHTML = '';
-                state.navObserver.disconnect();
-                const loadedMonthsInOrder = state.manifest.availableMonths.filter(m => state.loadedMonths.has(m));
-                for (const month of loadedMonthsInOrder) {
-                    const papersForMonth = Array.from(state.allPapers.values())
-                        .filter(p => p.id.startsWith(month.replace('-', '').substring(2)))
-                        .sort((a,b) => b.date.localeCompare(a.date));
-                    renderPapers(papersForMonth, month);
+                endOfListMessage.classList.add('hidden');
+                
+                if (state.navObserver) state.navObserver.disconnect();
+                setupNavObserver();
+                
+                state.loadedMonths = new Set();
+                state.currentMonthIndex = 0;
+                
+                if (state.manifest && state.manifest.availableMonths.length > 0) {
+                    const firstMonth = state.manifest.availableMonths[0];
+                    fetchAndRenderMonth(firstMonth);
                 }
                 return;
             }
