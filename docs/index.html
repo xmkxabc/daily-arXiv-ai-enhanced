@@ -79,8 +79,8 @@
         /* --- 新增：快速导航栏 CSS --- */
         .quick-nav-container {
             background-color: rgba(255, 255, 255, 0.85);
-            -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border-bottom: 1px solid #e5e7eb;
         }
         .quick-nav .year-group {
@@ -114,6 +114,14 @@
             background-color: #3b82f6;
             color: white;
             font-weight: 600;
+        }
+        /* 新增：搜索词高亮样式 */
+        .highlight {
+            background-color: #fef9c3; /* yellow-100 */
+            color: #713f12; /* yellow-900 */
+            font-weight: bold;
+            padding: 1px 2px;
+            border-radius: 3px;
         }
     </style>
 </head>
@@ -160,7 +168,8 @@
             allPapers: new Map(),
             loadedMonths: new Set(), currentMonthIndex: 0,
             isFetching: false, isSearchMode: false,
-            navObserver: null // 新增: 导航高亮观察者
+            navObserver: null, // 新增: 导航高亮观察者
+            currentQuery: '' // 新增: 当前搜索词
         };
 
         // --- DOM 元素引用 ---
@@ -174,6 +183,9 @@
         function escapeCQ(str) {
             return str ? String(str).replace(/'/g, "\\'") : '';
         }
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
 
         // --- 核心功能 ---
         async function init() {
@@ -181,12 +193,20 @@
                 const response = await fetch('./data/index.json');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 state.manifest = await response.json();
+                
+                // 新增：URL状态管理 - 页面加载时检查URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryFromUrl = urlParams.get('q');
 
                 if (state.manifest.availableMonths && state.manifest.availableMonths.length > 0) {
-                    // 新增：初始化新增的功能
                     setupQuickNav();
                     setupNavObserver();
-                    await fetchAndRenderMonth(state.manifest.availableMonths[0]);
+                    if (queryFromUrl) {
+                        searchInput.value = queryFromUrl;
+                        handleSearch();
+                    } else {
+                        await fetchAndRenderMonth(state.manifest.availableMonths[0]);
+                    }
                 } else {
                      papersContainer.innerHTML = `<p class="text-center text-gray-500">数据清单为空。</p>`;
                 }
@@ -242,7 +262,7 @@
 
             while (state.currentMonthIndex < targetIndex) {
                 if (state.isFetching) await new Promise(resolve => setTimeout(resolve, 100));
-                await loadNextMonth(false); // 调用 loadNextMonth 加载但不触发滚动
+                await loadNextMonth(false);
             }
             
             const anchor = document.getElementById(`month-anchor-${month}`);
@@ -264,7 +284,7 @@
                         state.allPapers.set(paper.id, paper);
                     }
                 });
-                if (!state.isSearchMode) renderPapers(papers, month); // 修改：传入月份
+                if (!state.isSearchMode) renderPapers(papers, month);
                 state.loadedMonths.add(month);
             } catch (error) {
                 console.error(`Failed to load data for month ${month}:`, error);
@@ -274,23 +294,25 @@
             }
         }
 
-                // 新的 renderPapers 函数，它会立即创建锚点，然后调用分块渲染
-        function renderPapers(papers, month) {
+        // --- 性能优化：重构 renderPapers 和引入 renderInChunks ---
+        function renderPapers(papers, month = null) {
+            const container = document.createDocumentFragment();
             if (month && !state.isSearchMode) {
                 const monthAnchor = document.createElement('div');
                 monthAnchor.id = `month-anchor-${month}`;
                 monthAnchor.dataset.monthAnchor = month;
-                papersContainer.appendChild(monthAnchor);
-                if (state.navObserver) {
-                    state.navObserver.observe(monthAnchor);
-                }
+                container.appendChild(monthAnchor);
+                state.navObserver.observe(monthAnchor);
             }
-            renderInChunks(papers);
+            
+            papersContainer.appendChild(container); // 先插入锚点
+            renderInChunks(papers); // 然后分块渲染内容
         }
 
-        // 新的辅助函数，它将渲染工作分解成小块
         function renderInChunks(papers, index = 0) {
-            const CHUNK_SIZE = 15; // 每次渲染15篇论文
+            const CHUNK_SIZE = 10; // 每次渲染10篇，以保持UI流畅
+            if (index >= papers.length) return; // 渲染完成
+
             const fragment = document.createDocumentFragment();
             const endIndex = Math.min(index + CHUNK_SIZE, papers.length);
 
@@ -307,40 +329,45 @@
             }
             papersContainer.appendChild(fragment);
 
-            if (endIndex < papers.length) {
-                requestAnimationFrame(() => renderInChunks(papers, endIndex));
-            }
+            // 使用 requestAnimationFrame 调度下一次渲染，让浏览器有机会重绘
+            requestAnimationFrame(() => renderInChunks(papers, endIndex));
         }
-
-
 
         function createPaperCard(paper) {
             const card = document.createElement('article');
             card.className = 'paper-card bg-white p-6 rounded-lg shadow-md border border-gray-200';
             
+            let title = paper.title || '无标题';
+            let abstract = paper.abstract || '无';
+
+            // 新增：高亮搜索词
+            if (state.isSearchMode && state.currentQuery && !state.categoryIndex[state.currentQuery]) {
+                const queryTerms = state.currentQuery.toLowerCase().split(/\s+/).filter(Boolean);
+                const regex = new RegExp(queryTerms.map(escapeRegex).join('|'), 'gi');
+                title = title.replace(regex, match => `<span class="highlight">${match}</span>`);
+                abstract = abstract.replace(regex, match => `<span class="highlight">${match}</span>`);
+            }
+
             let keywordsHTML = '无'; 
             if (paper.keywords && Array.isArray(paper.keywords) && paper.keywords.length > 0) {
                 const validKeywords = paper.keywords.filter(kw => typeof kw === 'string' && kw.trim() !== '');
                 if (validKeywords.length > 0) {
                     keywordsHTML = validKeywords.map(kw => 
-                        `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performKeywordSearch('${escapeCQ(kw)}')">${kw}</span>`
+                        `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performTagSearch('${escapeCQ(kw)}')">${kw}</span>`
                     ).join('');
                 }
             }
-
-            // 修改：使分类标签可点击
+            
             const categoriesHTML = (paper.categories && Array.isArray(paper.categories))
-                ? paper.categories.map(cat => `<span class="keyword-tag inline-block bg-gray-100 text-gray-600 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performCategorySearch('${escapeCQ(cat)}')">${cat}</span>`).join('')
+                ? paper.categories.map(cat => `<span class="keyword-tag inline-block bg-gray-100 text-gray-600 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" onclick="performTagSearch('${escapeCQ(cat)}')">${cat}</span>`).join('')
                 : '';
-
+            
             const absUrl = paper.id ? `https://arxiv.org/abs/${paper.id}` : '#';
             const pdfUrl = paper.id ? `https://arxiv.org/pdf/${paper.id}` : '#';
-
             const createInfoBox = (title, content, color) => {
                 if (!content) return '';
                 return `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800">${title}:</p><p class="text-${color}-700">${content}</p></div>`;
             };
-
             const commentHTML = createInfoBox('Comment', paper.comment, 'yellow');
             const tldrHTML = createInfoBox('TL;DR', paper.tldr, 'green');
             const aiCommentsHTML = createInfoBox('AI点评', paper.comments, 'indigo');
@@ -356,35 +383,29 @@
                     <p>${paper.translation || '无'}</p>
                     <br/>
                     <h3>原文摘要</h3>
-                    <p>${paper.abstract || '无'}</p>
+                    <p>${abstract}</p>
                 </div>
             `;
 
             card.innerHTML = `
                 <p class="text-sm text-gray-500 mb-2">${paper.date || '未知日期'} ${categoriesHTML ? '| ' : ''}${categoriesHTML}</p> 
-                <h2 class="text-2xl font-bold mb-2 text-gray-900">${paper.title || '无标题'}</h2>
+                <h2 class="text-2xl font-bold mb-2 text-gray-900">${title}</h2>
                 ${paper.zh_title ? `<h3 class="text-xl font-semibold mb-3 text-blue-700">${paper.zh_title}</h3>` : ''}
                 <div class="text-sm text-gray-600 mb-3">
                     <p><strong>作者:</strong> ${paper.authors || '未知作者'}</p>
                     <p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p>
                 </div>
-                
-                ${commentHTML}
-                ${tldrHTML}
-                ${aiCommentsHTML}
-                
+                ${commentHTML} ${tldrHTML} ${aiCommentsHTML}
                 <div class="flex items-center space-x-4 mb-4">
                     <a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页 (Abs)</a>
                     <a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a>
                     <button onclick="toggleAIDetails('${paper.id}')" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition">显示/隐藏AI分析</button>
                 </div>
-
                 ${aiAnalysisHTML}
             `;
             return card;
         }
 
-        // --- MODIFIED THIS FUNCTION --- (此函数在您提供的代码中已是最新版本，无需修改)
         function toggleAIDetails(paperId) {
             const detailsSection = document.getElementById(`ai-details-${paperId}`);
             if (detailsSection) {
@@ -392,7 +413,6 @@
             }
         }
         
-        // --- Unchanged functions --- (此函数在您提供的代码中已是最新版本，无需修改)
         function setupIntersectionObserver() {
             const options = { root: null, rootMargin: '0px', threshold: 0.5 };
             const callback = (entries, observer) => { entries.forEach(entry => { if (entry.isIntersecting && !state.isFetching && !state.isSearchMode) { loadNextMonth(); } }); };
@@ -400,9 +420,8 @@
             if (loader) observer.observe(loader);
         };
         
-        // 修改：loadNextMonth 增加一个参数以支持非滚动加载
         async function loadNextMonth(triggeredByScroll = true) {
-            if (state.isFetching) return;
+            if (state.isFetching || state.isSearchMode) return;
             if (state.manifest && state.manifest.availableMonths && state.currentMonthIndex + 1 < state.manifest.availableMonths.length) {
                 state.currentMonthIndex++;
                 const nextMonth = state.manifest.availableMonths[state.currentMonthIndex];
@@ -413,36 +432,31 @@
             }
         };
         
-        // 重大修改：handleSearch 函数现在更智能
+        // --- 重大升级：handleSearch, 包含URL状态管理和逻辑优化 ---
         async function handleSearch() {
             const query = searchInput.value.trim();
-            const lowerCaseQuery = query.toLowerCase();
+            state.currentQuery = query; // 保存当前查询，用于高亮
             
+            // 更新URL
+            const url = new URL(window.location);
+            if (query) {
+                url.searchParams.set('q', query);
+            } else {
+                url.searchParams.delete('q');
+            }
+            history.pushState({}, '', url);
+
             document.getElementById('quick-nav-container').style.display = query ? 'none' : 'block';
 
             if (!query) {
-                state.isSearchMode = false;
-                document.getElementById('quick-nav-container').style.display = 'block';
-                papersContainer.innerHTML = '';
-                endOfListMessage.classList.add('hidden');
-                
-                if (state.navObserver) state.navObserver.disconnect();
-                setupNavObserver();
-                
-                state.loadedMonths = new Set();
-                state.currentMonthIndex = 0;
-                
-                if (state.manifest && state.manifest.availableMonths.length > 0) {
-                    const firstMonth = state.manifest.availableMonths[0];
-                    fetchAndRenderMonth(firstMonth);
-                }
+                resetToDefaultView();
                 return;
             }
 
             state.isSearchMode = true; 
             loader.classList.remove('hidden');
             papersContainer.innerHTML = '';
-            state.navObserver.disconnect();
+            if(state.navObserver) state.navObserver.disconnect();
 
             try {
                 if (!state.categoryIndex) {
@@ -466,7 +480,7 @@
             if (state.categoryIndex[query]) {
                 state.categoryIndex[query].forEach(id => matchingIds.add(id));
             } else {
-                const queryTokens = lowerCaseQuery.split(/\s+/).filter(Boolean);
+                const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
                 queryTokens.forEach((token, index) => {
                     const foundIds = new Set();
                     for (const key in state.searchIndex) { 
@@ -486,23 +500,38 @@
 
             const results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
             if(results.length > 0){ 
-                renderPapers(results, null); // 搜索结果不按月份渲染
+                renderPapers(results, null);
             } else { 
                 papersContainer.innerHTML = `<p class="text-center text-gray-500">未找到与 "${query}" 相关的论文。</p>`; 
             }
             loader.classList.add('hidden');
         };
-
-        // 新增：分类搜索触发函数
-        function performCategorySearch(category) {
-            searchInput.value = category; 
-            handleSearch(); 
-            window.scrollTo(0, 0);
-        };
         
-        // 修改：统一的标签点击处理函数
-        function performKeywordSearch(keyword) {
-            searchInput.value = keyword; 
+        // 新增：重置视图函数
+        function resetToDefaultView() {
+            state.isSearchMode = false;
+            papersContainer.innerHTML = '';
+            endOfListMessage.classList.add('hidden');
+            if (state.navObserver) state.navObserver.disconnect();
+            setupNavObserver(); // 重新启用导航观察者
+
+            // 重新渲染已加载的数据
+            const loadedMonthsInOrder = state.manifest.availableMonths.filter(m => state.loadedMonths.has(m));
+            if (loadedMonthsInOrder.length === 0) { // 如果什么都没加载过
+                fetchAndRenderMonth(state.manifest.availableMonths[0]);
+            } else {
+                for (const month of loadedMonthsInOrder) {
+                    const papersForMonth = Array.from(state.allPapers.values())
+                        .filter(p => p.id.startsWith(month.replace('-', '').substring(2)))
+                        .sort((a,b) => b.date.localeCompare(a.date));
+                    renderPapers(papersForMonth, month);
+                }
+            }
+        }
+
+        // --- 统一的标签搜索函数 ---
+        function performTagSearch(tag) {
+            searchInput.value = tag; 
             handleSearch(); 
             window.scrollTo(0, 0);
         };
@@ -511,6 +540,13 @@
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(handleSearch, 300);
+        });
+        
+        // 监听浏览器前进/后退
+        window.addEventListener('popstate', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            searchInput.value = urlParams.get('q') || '';
+            handleSearch();
         });
 
         document.addEventListener('DOMContentLoaded', init);
