@@ -70,22 +70,22 @@ jobs:
 
           echo "工作流成功完成！"
        
-      #注释   
+      # set current date   
       - name: Set Current Date
         id: date
         run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
       
-      #注释 
-      - name: Create or Update Daily Digest Issue
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # **修正**: 从上一步的输出中获取日期
-          title: "每日速报 (Daily Digest): ${{ steps.date.outputs.TODAY_DATE }}"
-          content-filepath: "${{ steps.run_scripts.outputs.report_path }}"
-          labels: daily-digest, automated
+      # # 创建或更新每日速报问题 
+      # - name: Create or Update Daily Digest Issue
+      #   uses: peter-evans/create-issue-from-file@v5
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     # **修正**: 从上一步的输出中获取日期
+      #     title: "每日速报 (Daily Digest): ${{ steps.date.outputs.TODAY_DATE }}"
+      #     content-filepath: "${{ steps.run_scripts.outputs.report_path }}"
+      #     labels: daily-digest, automated
       
-      #注释
+      # 更新README.md文件
       - name: Commit and push changes
         run: |
           git config --global user.email "${{ vars.EMAIL }}"
@@ -96,11 +96,13 @@ jobs:
           else
             echo "No changes to commit."
           fi      
-      #注释
+      # 确保在推送之前拉取最新的更改
+      # 这可以避免推送失败
       - name: Pull latest changes
         run: git pull origin main --rebase
 
-      #注释
+      # 注释: 推送更改到GitHub
+      # 使用ad-m/github-push-action来推送更改
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
