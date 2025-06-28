@@ -616,6 +616,69 @@
         [data-theme="dark"] .paper-card a:hover {
             color: var(--accent-primary);
         }
+        
+        /* 新增：AI分析按钮样式 */
+        .ai-toggle-btn {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            transition: all 0.2s ease;
+        }
+        
+        .ai-toggle-btn:hover {
+            background-color: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+        
+        /* 新增：论文标题样式 */
+        .paper-title {
+            color: var(--text-primary) !important;
+        }
+        
+        .paper-title-zh {
+            color: var(--accent-primary) !important;
+        }
+        
+        /* 新增：AI分析标题样式 */
+        .ai-analysis-title {
+            color: var(--text-primary) !important;
+        }
+        
+        /* 新增：论文链接样式 */
+        .paper-link-abstract {
+            color: #3b82f6;
+            transition: color 0.2s ease;
+        }
+        
+        .paper-link-abstract:hover {
+            color: #1d4ed8;
+        }
+        
+        .paper-link-pdf {
+            color: #ef4444;
+            transition: color 0.2s ease;
+        }
+        
+        .paper-link-pdf:hover {
+            color: #dc2626;
+        }
+        
+        [data-theme="dark"] .paper-link-abstract {
+            color: #60a5fa;
+        }
+        
+        [data-theme="dark"] .paper-link-abstract:hover {
+            color: #93c5fd;
+        }
+        
+        [data-theme="dark"] .paper-link-pdf {
+            color: #f87171;
+        }
+        
+        [data-theme="dark"] .paper-link-pdf:hover {
+            color: #fca5a5;
+        }
     </style>
 </head>
 <body class="text-gray-800" data-theme="light">
@@ -1681,7 +1744,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                 </button>
             </div>
-            <h2 class="text-lg font-bold mb-2 text-gray-900">${paper.title || '无标题'}</h2>
+            <h2 class="text-lg font-bold mb-2 paper-title">${paper.title || '无标题'}</h2>
             <p class="text-sm text-gray-600 mb-2">${paper.authors ? paper.authors.slice(0, 100) + (paper.authors.length > 100 ? '...' : '') : '未知作者'}</p>
             <div id="lazy-${paper.id}" class="lazy-load" data-paper-id="${paper.id}">
                 <div class="text-center py-4 text-gray-400">
@@ -1732,8 +1795,8 @@
                     </button>
                 </div>
             </div>
-            <h2 class="text-xl md:text-2xl font-bold mb-2 text-gray-900">${title}</h2>
-            <h3 class="text-base font-semibold mb-3 text-blue-700 italic">${paper.zh_title||''}</h3>
+            <h2 class="text-xl md:text-2xl font-bold mb-2 paper-title">${title}</h2>
+            <h3 class="text-base font-semibold mb-3 paper-title-zh italic">${paper.zh_title||''}</h3>
             
             <!-- 新增：用户评分 -->
             <div id="paper-rating-${paper.id}" class="paper-rating compact-hidden"></div>
@@ -1760,7 +1823,7 @@
                 ${createInfoBox('AI点评',paper.comments,'indigo')}
             </div>
             <div id="ai-details-${paper.id}" class="details-section ai-details-section compact-hidden">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">AI分析与摘要</h2>
+                <h2 class="text-2xl font-bold mb-4 ai-analysis-title">AI分析与摘要</h2>
                 ${paper.motivation?`<h3>研究动机</h3><p>${paper.motivation}</p><br/>`:''}
                 ${paper.method?`<h3>研究方法</h3><p>${paper.method}</p><br/>`:''}
                 ${paper.results?`<h3>研究结果</h3><p>${paper.results}</p><br/>`:''}
@@ -1769,9 +1832,9 @@
                 <h3>原文摘要</h3><p class="italic text-sm">${paper.abstract||'无'}</p>
             </div>
             <div class="flex items-center space-x-4 mt-4">
-                <a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页</a>
-                <a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a>
-                <button data-action="toggle-ai-details" data-paper-id="${paper.id}" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition compact-hidden">AI分析</button>
+                <a href="${absUrl}" target="_blank" class="paper-link-abstract font-semibold">摘要页</a>
+                <a href="${pdfUrl}" target="_blank" class="paper-link-pdf font-semibold">PDF</a>
+                <button data-action="toggle-ai-details" data-paper-id="${paper.id}" class="ml-auto ai-toggle-btn font-bold py-2 px-4 rounded-lg transition compact-hidden">AI分析</button>
             </div>`;
     }
 
