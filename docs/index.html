@@ -56,6 +56,10 @@
         /* 新增：Toast通知样式 */
         .toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background-color: #22c55e; color: white; padding: 1rem 2rem; border-radius: 0.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: top 0.5s ease-in-out; z-index: 100; }
         .toast.show { top: 2rem; }
+        /* 新增：分类筛选器样式 */
+        .category-filter-btn { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: #4b5563; cursor: pointer; transition: all 0.2s ease; }
+        .category-filter-btn:hover { background-color: #e5e7eb; border-color: #9ca3af; }
+        .category-filter-btn.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
         
         /* --- View Transitions API --- */
         @keyframes fade-in { from { opacity: 0; } }
@@ -103,6 +107,11 @@
         <input type="text" id="searchInput" placeholder="搜索论文或点击分类/关键词进行筛选..." 
                class="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
     </div>
+
+    <!-- 新增：分类筛选器容器 -->
+    <div id="category-filter-container" class="mb-8 hidden">
+        <div id="category-filters" class="flex flex-wrap items-center gap-2"></div>
+    </div>
     
     <main id="main-content">
         <div id="search-info" class="mb-4 text-lg text-gray-700 hidden"></div>
@@ -133,8 +142,11 @@
     const state = {
         manifest: null, searchIndex: null, categoryIndex: null, allPapers: new Map(),
         loadedMonths: new Set(), currentMonthIndex: -1, isFetching: false, isSearchMode: false,
-        navObserver: null, currentQuery: '', favorites: new Set(),
-        viewMode: 'detailed'
+        navObserver: null, currentQuery: '', favorites: new Set(), viewMode: 'detailed',
+        // 新增：分类筛选状态
+        mainCategories: ['cs.CV', 'cs.LG', 'cs.CL', 'cs.AI', 'cs.RO', 'stat.ML'],
+        currentSearchResults: [], // 存储当前搜索的原始结果
+        activeCategoryFilter: 'all' // 当前激活的分类筛选器
     };
 
     // --- DOM 元素引用 ---
@@ -150,7 +162,9 @@
     const backToTopBtn = document.getElementById('back-to-top');
     const lastUpdatedEl = document.getElementById('last-updated');
     const searchInfoEl = document.getElementById('search-info');
-    const toastNotificationEl = document.getElementById('toast-notification'); // 新增
+    const toastNotificationEl = document.getElementById('toast-notification');
+    const categoryFilterContainer = document.getElementById('category-filter-container'); // 新增
+    const categoryFiltersEl = document.getElementById('category-filters'); // 新增
 
     // --- 工具函数 ---
     function escapeCQ(str) { return str ? String(str).replace(/'/g, "\\'") : ''; }
@@ -202,6 +216,7 @@
     
     function setupUI() {
         setupQuickNav();
+        setupCategoryFilters(); // 新增：设置分类筛选器
         updateSearchStickiness();
         setupNavObserver();
         setupBackToTopButton();
@@ -239,6 +254,15 @@
         document.getElementById('show-favorites-btn').dataset.action = 'search-tag';
         document.getElementById('show-favorites-btn').dataset.tagValue = 'favorites';
         updateViewModeUI();
+    }
+    
+    // 新增：构建分类筛选器的UI
+    function setupCategoryFilters() {
+        let buttonsHTML = `<button class="category-filter-btn active" data-action="filter-category" data-category="all">全部</button>`;
+        state.mainCategories.forEach(cat => {
+            buttonsHTML += `<button class="category-filter-btn" data-action="filter-category" data-category="${cat}">${cat}</button>`;
+        });
+        categoryFiltersEl.innerHTML = buttonsHTML;
     }
 
     function setupNavObserver() {
@@ -343,6 +367,17 @@
         const absUrl = paper.id ? `https://arxiv.org/abs/${paper.id}` : '#';
         const pdfUrl = paper.id ? `https://arxiv.org/pdf/${paper.id}` : '#';
         const isFavorited = state.favorites.has(paper.id);
+        
+        // 优化：修改此函数以支持斜体和更小字号
+        const createInfoBox = (title, content, color) => {
+            if (!content) return '';
+            const isTldr = title === 'TL;DR';
+            // 添加斜体类如果标题是 TL;DR
+            const titleClass = isTldr ? 'italic' : '';
+            // 为TLDR内容添加斜体和更小字号的类
+            const contentClass = isTldr ? 'italic text-sm' : '';
+            return `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800 ${titleClass}">${title}:</p><p class="text-${color}-700 ${contentClass}">${content}</p></div>`;
+        };
 
         card.innerHTML = `
             <div class="flex justify-between items-start">
@@ -359,10 +394,16 @@
                 </div>
             </div>
             <h2 class="text-xl md:text-2xl font-bold mb-2 text-gray-900">${title}</h2>
-            <h3 class="text-lg md:text-xl font-semibold mb-3 text-blue-700">${paper.zh_title||''}</h3>
+            <!-- 优化：添加 italic class 并减小字号 -->
+            <h3 class="text-base md:text-lg font-semibold mb-3 text-blue-700 italic">${paper.zh_title||''}</h3>
             <div class="text-sm text-gray-600 mb-3 compact-hidden">
                 <p><strong>作者:</strong> ${paper.authors||'未知作者'}</p>
                 <p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p>
+            </div>
+            <div class="compact-hidden">
+                ${createInfoBox('Comment',paper.comment,'yellow')}
+                ${createInfoBox('TL;DR',paper.tldr,'green')}
+                ${createInfoBox('AI点评',paper.comments,'indigo')}
             </div>
             <div id="ai-details-${paper.id}" class="details-section ai-details-section compact-hidden">
                 <h2 class="text-2xl font-bold mb-4 text-gray-800">AI分析与摘要</h2>
@@ -468,6 +509,7 @@
         }
     }
     
+    // 优化：重构搜索逻辑以支持二级筛选
     async function handleSearch() {
         await applyViewTransition(async () => {
             const query = searchInput.value.trim();
@@ -480,15 +522,15 @@
             if (!query) { resetToDefaultView(); return; }
             
             state.isSearchMode = true;
+            state.activeCategoryFilter = 'all'; // 每次新搜索都重置分类筛选
             papersContainer.classList.add('hidden');
             searchResultsContainer.classList.remove('hidden');
-            searchResultsContainer.innerHTML = '';
             quickNavContainer.style.display = 'none';
+            categoryFilterContainer.classList.remove('hidden'); // 显示分类筛选器
             searchInfoEl.classList.remove('hidden');
             showSkeletonLoader();
 
-            let results = [], infoText = '';
-
+            let results = [];
             if (query === 'favorites') {
                 const favoriteIds = Array.from(state.favorites);
                 if (favoriteIds.length > 0) {
@@ -496,9 +538,6 @@
                     await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
                     results = favoriteIds.map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
                 }
-                infoText = `正在显示您的 <strong>${results.length}</strong> 篇收藏：`;
-                if (results.length === 0) searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">点击论文卡片右上角的星形图标来添加收藏。</p>`;
-            
             } else {
                 try {
                     if (!state.categoryIndex) state.categoryIndex = await (await fetch('./data/category_index.json')).json();
@@ -512,13 +551,48 @@
                 const requiredMonths = new Set([...matchingIds].map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
                 await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
                 results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
-                infoText = `为您找到 <strong>${results.length}</strong> 篇关于 "<strong>${query}</strong>" 的论文：`;
-                if (results.length === 0) searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">未找到相关论文。您可以尝试其他关键词，或清空搜索框返回主列表。</p>`;
             }
             
             hideSkeletonLoader();
-            searchInfoEl.innerHTML = infoText;
-            if(results.length > 0) { renderInChunks(results, searchResultsContainer); }
+            state.currentSearchResults = results; // 保存原始搜索结果
+            renderFilteredResults(); // 调用新的渲染函数
+        });
+    }
+    
+    // 新增：根据分类筛选来渲染结果
+    function renderFilteredResults() {
+        const { currentSearchResults, activeCategoryFilter, currentQuery } = state;
+        
+        const filtered = activeCategoryFilter === 'all'
+            ? currentSearchResults
+            : currentSearchResults.filter(paper => paper.categories && paper.categories.includes(activeCategoryFilter));
+
+        searchResultsContainer.innerHTML = ''; // 清空现有结果
+        
+        let infoText;
+        if (currentQuery === 'favorites') {
+            infoText = `正在显示您的 <strong>${currentSearchResults.length}</strong> 篇收藏`;
+        } else {
+            infoText = `为您找到 <strong>${currentSearchResults.length}</strong> 篇关于 "<strong>${currentQuery}</strong>" 的论文`;
+        }
+        
+        if (activeCategoryFilter !== 'all') {
+            infoText += `，其中 <strong>${filtered.length}</strong> 篇属于 <strong>${activeCategoryFilter}</strong> 分类：`;
+        } else {
+            infoText += '：';
+        }
+
+        searchInfoEl.innerHTML = infoText;
+
+        if (filtered.length > 0) {
+            renderInChunks(filtered, searchResultsContainer);
+        } else {
+            searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">在此分类下未找到相关论文。</p>`;
+        }
+        
+        // 更新分类按钮的激活状态
+        document.querySelectorAll('.category-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.category === activeCategoryFilter);
         });
     }
     
@@ -535,6 +609,9 @@
         papersContainer.classList.remove('hidden');
         quickNavContainer.style.display = 'block';
         searchInfoEl.classList.add('hidden');
+        categoryFilterContainer.classList.add('hidden'); // 隐藏分类筛选器
+        state.currentSearchResults = [];
+        state.activeCategoryFilter = 'all';
         updateSearchStickiness();
     }
 
@@ -637,6 +714,14 @@
                     performTagSearch(tagValue);
                     break;
              }
+        });
+        
+        // 新增：分类筛选器的点击事件
+        categoryFilterContainer.addEventListener('click', (event) => {
+            const target = event.target.closest('[data-action="filter-category"]');
+            if (!target) return;
+            state.activeCategoryFilter = target.dataset.category;
+            renderFilteredResults();
         });
 
         // 搜索框输入事件
