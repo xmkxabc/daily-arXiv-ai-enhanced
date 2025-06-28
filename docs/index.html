@@ -60,6 +60,11 @@
         .category-filter-btn { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: #4b5563; cursor: pointer; transition: all 0.2s ease; }
         .category-filter-btn:hover { background-color: #e5e7eb; border-color: #9ca3af; }
         .category-filter-btn.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        /* 新增：日期筛选器样式 */
+        .month-header { font-size: 1.75rem; font-weight: 700; color: #1f2937; padding: 2rem 0 1rem 0; border-top: 1px solid #d1d5db; margin-top: 2rem; }
+        .date-filter-btn { padding: 0.375rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; color: #4b5563; cursor: pointer; transition: all 0.2s ease; }
+        .date-filter-btn:hover { background-color: #f3f4f6; border-color: #9ca3af; }
+        .date-filter-btn.active { background-color: #60a5fa; color: white; border-color: #60a5fa; }
         
         /* --- View Transitions API --- */
         @keyframes fade-in { from { opacity: 0; } }
@@ -115,7 +120,7 @@
     
     <main id="main-content">
         <div id="search-info" class="mb-4 text-lg text-gray-700 hidden"></div>
-        <div id="papers-container" class="space-y-8"></div>
+        <div id="papers-container"></div>
         <div id="search-results-container" class="space-y-8 hidden"></div>
         <div id="skeleton-container" class="space-y-8 hidden"></div>
     </main>
@@ -145,8 +150,10 @@
         navObserver: null, currentQuery: '', favorites: new Set(), viewMode: 'detailed',
         // 新增：分类筛选状态
         mainCategories: ['cs.CV', 'cs.LG', 'cs.CL', 'cs.AI', 'cs.RO', 'stat.ML'],
-        currentSearchResults: [], // 存储当前搜索的原始结果
-        activeCategoryFilter: 'all' // 当前激活的分类筛选器
+        currentSearchResults: [], 
+        activeCategoryFilter: 'all',
+        // 新增：日期筛选状态
+        activeDateFilters: new Map() // Key: 'YYYY-MM', Value: 'DD' or 'all'
     };
 
     // --- DOM 元素引用 ---
@@ -163,8 +170,8 @@
     const lastUpdatedEl = document.getElementById('last-updated');
     const searchInfoEl = document.getElementById('search-info');
     const toastNotificationEl = document.getElementById('toast-notification');
-    const categoryFilterContainer = document.getElementById('category-filter-container'); // 新增
-    const categoryFiltersEl = document.getElementById('category-filters'); // 新增
+    const categoryFilterContainer = document.getElementById('category-filter-container');
+    const categoryFiltersEl = document.getElementById('category-filters');
 
     // --- 工具函数 ---
     function escapeCQ(str) { return str ? String(str).replace(/'/g, "\\'") : ''; }
@@ -191,14 +198,14 @@
             
             if (state.manifest.availableMonths && state.manifest.availableMonths.length > 0) {
                 setupUI();
-                setupGlobalEventListeners(); // 新增：设置全局事件监听器
+                setupGlobalEventListeners();
                 
                 const urlParams = new URLSearchParams(window.location.search);
                 const queryFromUrl = urlParams.get('q');
                 const paperFromUrl = urlParams.get('paper');
 
                 if (paperFromUrl) {
-                    await handleDirectLink(paperFromUrl); // 新增：处理直接链接
+                    await handleDirectLink(paperFromUrl);
                 } else if (queryFromUrl) {
                     searchInput.value = queryFromUrl;
                     await handleSearch();
@@ -216,7 +223,7 @@
     
     function setupUI() {
         setupQuickNav();
-        setupCategoryFilters(); // 新增：设置分类筛选器
+        setupCategoryFilters();
         updateSearchStickiness();
         setupNavObserver();
         setupBackToTopButton();
@@ -239,14 +246,12 @@
             navHTML += `<div class="year-group"><span class="year-label">${year}</span>`;
             monthsByYear[year].forEach(month => {
                 const monthLabel = month.substring(5, 7);
-                // 优化：移除了onclick，改用事件委托
                 navHTML += `<button class="month-btn" data-action="navigate-month" data-month="${month}">${monthLabel}月</button>`;
             });
             navHTML += `</div>`;
         });
         document.getElementById('month-nav-wrapper').innerHTML = navHTML;
         
-        // 优化：移除了onclick，改用事件委托
         document.getElementById('view-detailed-btn').dataset.action = 'toggle-view';
         document.getElementById('view-detailed-btn').dataset.mode = 'detailed';
         document.getElementById('view-compact-btn').dataset.action = 'toggle-view';
@@ -256,7 +261,6 @@
         updateViewModeUI();
     }
     
-    // 新增：构建分类筛选器的UI
     function setupCategoryFilters() {
         let buttonsHTML = `<button class="category-filter-btn active" data-action="filter-category" data-category="all">全部</button>`;
         state.mainCategories.forEach(cat => {
@@ -322,16 +326,73 @@
         finally { state.isFetching = false; }
     }
 
-    function renderPapers(papers, month = null, targetContainer) {
-        if (month && !state.isSearchMode && !document.getElementById(`month-anchor-${month}`)) {
-            const monthAnchor = document.createElement('div');
-            monthAnchor.id = `month-anchor-${month}`;
-            monthAnchor.dataset.monthAnchor = month;
-            targetContainer.appendChild(monthAnchor);
-            state.navObserver.observe(monthAnchor);
-        }
-        renderInChunks(papers, targetContainer);
+    // 优化：renderPapers现在负责创建月份的整体容器
+    function renderPapers(papersForMonth, month) {
+        // 创建月份的根容器
+        const monthWrapper = document.createElement('div');
+        monthWrapper.id = `month-content-${month}`;
+        monthWrapper.dataset.monthAnchor = month;
+
+        // 创建月份标题和日期筛选栏
+        const header = document.createElement('h2');
+        header.className = 'month-header';
+        header.textContent = `${month.substring(0,4)}年${month.substring(5,7)}月`;
+        
+        const dateFilterWrapper = document.createElement('div');
+        dateFilterWrapper.id = `date-filter-wrapper-${month}`;
+        dateFilterWrapper.className = 'flex flex-wrap items-center gap-2 mb-6';
+        
+        const papersListWrapper = document.createElement('div');
+        papersListWrapper.id = `papers-list-wrapper-${month}`;
+        papersListWrapper.className = 'space-y-8';
+        
+        monthWrapper.append(header, dateFilterWrapper, papersListWrapper);
+        papersContainer.appendChild(monthWrapper);
+        
+        // 启动对月份锚点的观察
+        state.navObserver.observe(monthWrapper);
+        
+        // 更新该月份的视图（日期筛选+论文列表）
+        updateMonthView(month, papersForMonth);
     }
+    
+    // 新增：更新单个模块视图的函数（日期筛选器+论文列表）
+    function updateMonthView(month, allPapersForMonth) {
+        const dateFilterWrapper = document.getElementById(`date-filter-wrapper-${month}`);
+        const papersListWrapper = document.getElementById(`papers-list-wrapper-${month}`);
+        if (!dateFilterWrapper || !papersListWrapper) return;
+
+        const activeDay = state.activeDateFilters.get(month) || 'all';
+
+        // 1. 渲染日期筛选器
+        renderDateFilter(month, allPapersForMonth, dateFilterWrapper);
+
+        // 2. 根据日期筛选论文
+        const filteredPapers = (activeDay === 'all')
+            ? allPapersForMonth
+            : allPapersForMonth.filter(p => p.date && p.date.endsWith(`-${activeDay.padStart(2, '0')}`));
+
+        // 3. 渲染论文列表
+        papersListWrapper.innerHTML = '';
+        if (filteredPapers.length > 0) {
+            renderInChunks(filteredPapers, papersListWrapper);
+        } else {
+            papersListWrapper.innerHTML = `<p class="text-center text-gray-500 py-4">该日期没有论文。</p>`;
+        }
+    }
+
+    // 新增：渲染日期筛选器的函数
+    function renderDateFilter(month, papers, container) {
+        const activeDay = state.activeDateFilters.get(month) || 'all';
+        const daysWithPapers = [...new Set(papers.map(p => p.date.split('-')[2]))].sort((a, b) => b - a);
+
+        let buttonsHTML = `<button class="date-filter-btn ${activeDay === 'all' ? 'active' : ''}" data-action="filter-by-date" data-month="${month}" data-day="all">全部日期</button>`;
+        daysWithPapers.forEach(day => {
+            buttonsHTML += `<button class="date-filter-btn ${activeDay === day ? 'active' : ''}" data-action="filter-by-date" data-month="${month}" data-day="${day}">${day}日</button>`;
+        });
+        container.innerHTML = buttonsHTML;
+    }
+
 
     function renderInChunks(papers, container, index = 0) {
         const CHUNK_SIZE = 10;
@@ -350,7 +411,7 @@
 
     function createPaperCard(paper) {
         const card = document.createElement('article');
-        card.id = `card-${paper.id}`; // 新增：为直接链接和高亮添加ID
+        card.id = `card-${paper.id}`;
         card.style.viewTransitionName = `card-${paper.id}`;
         card.className = 'paper-card bg-white p-6 rounded-lg shadow-md border border-gray-200';
         
@@ -361,25 +422,20 @@
             title = title.replace(regex, match => `<span class="highlight">${match}</span>`);
         }
         
-        // 优化：移除onclick，改用data-*属性
         const keywordsHTML = (paper.keywords && paper.keywords.length > 0) ? paper.keywords.map(kw => `<span class="keyword-tag inline-block bg-blue-100 text-blue-800 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" data-action="search-tag" data-tag-value="${escapeCQ(kw)}">${kw}</span>`).join('') : '无';
         const categoriesHTML = (paper.categories && paper.categories.length > 0) ? paper.categories.map(cat => `<span class="keyword-tag inline-block bg-gray-100 text-gray-600 text-sm font-medium mr-2 mb-2 px-3 py-1 rounded-full" data-action="search-tag" data-tag-value="${escapeCQ(cat)}">${cat}</span>`).join('') : '';
         const absUrl = paper.id ? `https://arxiv.org/abs/${paper.id}` : '#';
         const pdfUrl = paper.id ? `https://arxiv.org/pdf/${paper.id}` : '#';
         const isFavorited = state.favorites.has(paper.id);
         
-        // 修复：修正createInfoBox函数以正确应用所有样式
         const createInfoBox = (title, content, color) => {
             if (!content) return '';
             const isTldr = title === 'TL;DR';
-            // 添加斜体类如果标题是 TL;DR
             const titleClass = isTldr ? 'italic' : '';
-            // 组合基础颜色类和特殊样式类
             let contentClasses = [`text-${color}-700`];
             if (isTldr) {
                 contentClasses.push('italic', 'text-sm');
             }
-            
             return `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800 ${titleClass}">${title}:</p><p class="${contentClasses.join(' ')}">${content}</p></div>`;
         };
 
@@ -387,18 +443,15 @@
             <div class="flex justify-between items-start">
                 <p class="text-sm text-gray-500 mb-2 flex-grow">${paper.date||'未知日期'} ${categoriesHTML?'| ':''}${categoriesHTML}</p>
                 <div class="flex items-center space-x-2">
-                    <!-- 新增：分享按钮 -->
                     <button data-action="share-paper" data-paper-id="${paper.id}" title="分享论文链接" class="share-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" /></svg>
                     </button>
-                    <!-- 优化：移除onclick, 添加aria-label -->
                     <button data-action="toggle-favorite" data-paper-id="${paper.id}" title="收藏/取消收藏" aria-label="收藏或取消收藏" class="favorite-btn ${isFavorited?'favorited':''}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                     </button>
                 </div>
             </div>
             <h2 class="text-xl md:text-2xl font-bold mb-2 text-gray-900">${title}</h2>
-            <!-- 修复：统一使用更小的字号 -->
             <h3 class="text-base font-semibold mb-3 text-blue-700 italic">${paper.zh_title||''}</h3>
             <div class="text-sm text-gray-600 mb-3 compact-hidden">
                 <p><strong>作者:</strong> ${paper.authors||'未知作者'}</p>
@@ -415,13 +468,12 @@
                 ${paper.method?`<h3>研究方法</h3><p>${paper.method}</p><br/>`:''}
                 ${paper.results?`<h3>研究结果</h3><p>${paper.results}</p><br/>`:''}
                 ${paper.conclusion?`<h3>研究结论</h3><p>${paper.conclusion}</p><br/>`:''}
-                <h3>摘要翻译</h3><p>${paper.translation||'无'}</p><br/>
-                <h3>原文摘要</h3><p>${paper.abstract||'无'}</p>
+                <h3>摘要翻译</h3><p class="italic text-sm">${paper.translation||'无'}</p><br/>
+                <h3>原文摘要</h3><p class="italic text-sm">${paper.abstract||'无'}</p>
             </div>
             <div class="flex items-center space-x-4 mt-4">
                 <a href="${absUrl}" target="_blank" class="text-blue-500 hover:text-blue-700 font-semibold">摘要页</a>
                 <a href="${pdfUrl}" target="_blank" class="text-red-500 hover:text-red-700 font-semibold">PDF</a>
-                <!-- 优化：移除onclick -->
                 <button data-action="toggle-ai-details" data-paper-id="${paper.id}" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition compact-hidden">AI分析</button>
             </div>`;
         return card;
@@ -434,7 +486,6 @@
     
     function loadFavorites() { const favs = localStorage.getItem('arxiv_favorites'); if (favs) { try { state.favorites = new Set(JSON.parse(favs)); } catch (e) { state.favorites = new Set(); } } }
     function saveFavorites() { localStorage.setItem('arxiv_favorites', JSON.stringify(Array.from(state.favorites))); }
-    // 优化：函数签名改变以接受按钮元素
     function toggleFavorite(event, paperId, btn) {
         event.stopPropagation();
         const update = () => {
@@ -469,7 +520,7 @@
 
     // --- 核心逻辑：状态切换与导航 ---
     async function navigateToMonth(month) {
-        resetToDefaultView(); // 确保在导航时退出搜索模式
+        resetToDefaultView();
         const targetIndex = state.manifest.availableMonths.indexOf(month);
         if (targetIndex === -1) return;
         loader.classList.remove('hidden');
@@ -485,13 +536,13 @@
         for(let i = 0; i <= targetIndex; i++) {
             const m = state.manifest.availableMonths[i];
             const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(m.replace('-', '').substring(2)));
-            renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), m, papersContainer);
+            renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), m);
         }
         state.currentMonthIndex = targetIndex;
         loader.classList.add('hidden');
 
         requestAnimationFrame(() => {
-             const anchor = document.getElementById(`month-anchor-${month}`);
+             const anchor = document.getElementById(`month-content-${month}`);
              if (anchor) anchor.scrollIntoView({ behavior: 'auto', block: 'start' });
         });
     }
@@ -505,7 +556,7 @@
             const nextMonth = state.manifest.availableMonths[nextIndex];
             await fetchMonth(nextMonth);
             const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(nextMonth.replace('-', '').substring(2)));
-            renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), nextMonth, papersContainer);
+            renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), nextMonth);
             loader.classList.add('hidden');
         } else {
             if (loader) loader.classList.add('hidden');
@@ -519,18 +570,18 @@
             const query = searchInput.value.trim();
             state.currentQuery = query;
             const url = new URL(window.location);
-            url.searchParams.delete('paper'); // 清除paper参数
+            url.searchParams.delete('paper');
             query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
             history.pushState({}, '', url);
 
             if (!query) { resetToDefaultView(); return; }
             
             state.isSearchMode = true;
-            state.activeCategoryFilter = 'all'; // 每次新搜索都重置分类筛选
+            state.activeCategoryFilter = 'all';
             papersContainer.classList.add('hidden');
             searchResultsContainer.classList.remove('hidden');
             quickNavContainer.style.display = 'none';
-            categoryFilterContainer.classList.remove('hidden'); // 显示分类筛选器
+            categoryFilterContainer.classList.remove('hidden');
             searchInfoEl.classList.remove('hidden');
             showSkeletonLoader();
 
@@ -558,8 +609,8 @@
             }
             
             hideSkeletonLoader();
-            state.currentSearchResults = results; // 保存原始搜索结果
-            renderFilteredResults(); // 调用新的渲染函数
+            state.currentSearchResults = results;
+            renderFilteredResults();
         });
     }
     
@@ -571,7 +622,7 @@
             ? currentSearchResults
             : currentSearchResults.filter(paper => paper.categories && paper.categories.includes(activeCategoryFilter));
 
-        searchResultsContainer.innerHTML = ''; // 清空现有结果
+        searchResultsContainer.innerHTML = '';
         
         let infoText;
         if (currentQuery === 'favorites') {
@@ -594,7 +645,6 @@
             searchResultsContainer.innerHTML = `<p class="text-center text-gray-500">在此分类下未找到相关论文。</p>`;
         }
         
-        // 更新分类按钮的激活状态
         document.querySelectorAll('.category-filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.category === activeCategoryFilter);
         });
@@ -613,13 +663,13 @@
         papersContainer.classList.remove('hidden');
         quickNavContainer.style.display = 'block';
         searchInfoEl.classList.add('hidden');
-        categoryFilterContainer.classList.add('hidden'); // 隐藏分类筛选器
+        categoryFilterContainer.classList.add('hidden');
         state.currentSearchResults = [];
         state.activeCategoryFilter = 'all';
+        state.activeDateFilters.clear(); // 重置时清除日期筛选
         updateSearchStickiness();
     }
 
-    // 优化：现在此函数会更新URL
     function performTagSearch(tag) {
         window.scrollTo({ top: 0, behavior: 'auto' });
         searchInput.value = tag;
@@ -634,18 +684,34 @@
 
     // --- 新增和优化的事件处理 ---
     
-    // 新增：处理通过URL直接访问论文的逻辑
+    // 修复：处理无效的论文ID直接链接
     async function handleDirectLink(paperId) {
+        if (!/^\d{4}\.\d{4,5}$/.test(paperId)) {
+            showToast(`无效的论文ID格式: ${paperId}`);
+            console.error(`无效的论文ID格式: ${paperId}`);
+            const url = new URL(window.location);
+            url.searchParams.delete('paper');
+            history.replaceState({}, '', url);
+            await loadNextMonth(false); // 加载默认内容
+            return;
+        }
+
         const month = `20${paperId.substring(0, 2)}-${paperId.substring(2, 4)}`;
         await navigateToMonth(month);
 
+        if (!state.allPapers.has(paperId)) {
+            console.error(`论文 ID ${paperId} 在数据中未找到。`);
+            showToast(`找不到指定的论文 (ID: ${paperId})`);
+            const url = new URL(window.location);
+            url.searchParams.delete('paper');
+            history.replaceState({}, '', url);
+            return;
+        }
+
         const checkCardExists = (resolve) => {
             const card = document.getElementById(`card-${paperId}`);
-            if (card) {
-                resolve(card);
-            } else {
-                requestAnimationFrame(() => checkCardExists(resolve));
-            }
+            if (card) { resolve(card); } 
+            else { requestAnimationFrame(() => checkCardExists(resolve)); }
         };
 
         const card = await new Promise(checkCardExists);
@@ -655,7 +721,6 @@
         setTimeout(() => card.classList.remove('highlight-shared-paper'), 3000);
     }
     
-    // 新增：显示Toast通知
     function showToast(message) {
         toastNotificationEl.textContent = message;
         toastNotificationEl.classList.add('show');
@@ -664,7 +729,6 @@
         }, 3000);
     }
 
-    // 新增：分享论文的功能
     async function sharePaper(paperId) {
         const url = new URL(window.location.origin + window.location.pathname);
         url.searchParams.set('paper', paperId);
@@ -677,26 +741,24 @@
         }
     }
 
-    // 新增：全局事件监听器（事件委托）
     function setupGlobalEventListeners() {
         // 主内容区域的点击事件
         mainContainer.addEventListener('click', (event) => {
             const target = event.target.closest('[data-action]');
             if (!target) return;
-            const { action, paperId, tagValue } = target.dataset;
+            const { action, paperId, tagValue, month, day } = target.dataset;
 
             switch (action) {
-                case 'toggle-ai-details':
-                    toggleAIDetails(paperId);
-                    break;
-                case 'search-tag':
-                    performTagSearch(tagValue);
-                    break;
-                case 'toggle-favorite':
-                    toggleFavorite(event, paperId, target);
-                    break;
-                case 'share-paper':
-                    sharePaper(paperId);
+                case 'toggle-ai-details': toggleAIDetails(paperId); break;
+                case 'search-tag': performTagSearch(tagValue); break;
+                case 'toggle-favorite': toggleFavorite(event, paperId, target); break;
+                case 'share-paper': sharePaper(paperId); break;
+                case 'filter-by-date': // 新增：处理日期筛选
+                    state.activeDateFilters.set(month, day);
+                    const papersForMonth = Array.from(state.allPapers.values())
+                        .filter(p => p.id.startsWith(month.replace('-', '').substring(2)))
+                        .sort((a,b)=>b.date.localeCompare(a.date));
+                    updateMonthView(month, papersForMonth);
                     break;
             }
         });
@@ -708,19 +770,12 @@
              const { action, month, mode, tagValue } = target.dataset;
 
              switch (action) {
-                case 'navigate-month':
-                    navigateToMonth(month);
-                    break;
-                case 'toggle-view':
-                    toggleViewMode(mode);
-                    break;
-                case 'search-tag': // 处理收藏按钮
-                    performTagSearch(tagValue);
-                    break;
+                case 'navigate-month': navigateToMonth(month); break;
+                case 'toggle-view': toggleViewMode(mode); break;
+                case 'search-tag': performTagSearch(tagValue); break;
              }
         });
         
-        // 新增：分类筛选器的点击事件
         categoryFilterContainer.addEventListener('click', (event) => {
             const target = event.target.closest('[data-action="filter-category"]');
             if (!target) return;
@@ -728,7 +783,6 @@
             renderFilteredResults();
         });
 
-        // 搜索框输入事件
         let searchTimeout;
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
@@ -736,7 +790,6 @@
         });
     }
 
-    // 浏览器历史记录变化事件
     window.addEventListener('popstate', () => { 
         const urlParams = new URLSearchParams(window.location.search);
         const query = urlParams.get('q') || '';
@@ -746,10 +799,8 @@
         }
     });
 
-    // 窗口大小变化事件
     window.addEventListener('resize', updateSearchStickiness);
     
-    // DOM加载完成事件
     document.addEventListener('DOMContentLoaded', init);
 </script>
 
