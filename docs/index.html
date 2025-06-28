@@ -22,7 +22,7 @@
         .info-box-title { font-weight: 600; }
         .ai-details-section { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.5s ease-in-out, padding-top 0.5s ease-in-out, border-top-width 0.5s ease-in-out; border-top-width: 0; border-top-style: solid; border-color: #e5e7eb; }
         .ai-details-section.expanded { max-height: 2000px; opacity: 1; margin-top: 1rem; padding-top: 1rem; border-top-width: 1px; }
-        .quick-nav-container { background-color: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid #e5e7eb; }
+        .quick-nav-container { background-color: rgba(255, 255, 255, 0.85); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid #e5e7eb; }
         /* 优化：改进快速导航栏布局 */
         .quick-nav .year-group { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 0.25rem; }
         .quick-nav .year-label { font-weight: 700; color: #1f2937; padding: 0.5rem 0.75rem; background-color: #f3f4f6; border-radius: 0.375rem; margin-right: 0.75rem; }
@@ -66,6 +66,13 @@
         .date-filter-btn:hover { background-color: #f3f4f6; border-color: #9ca3af; }
         .date-filter-btn.active { background-color: #60a5fa; color: white; border-color: #60a5fa; }
         
+        /* 优化：顶部加载进度条样式 */
+        #progress-container { position: fixed; top: 0; left: 0; right: 0; height: auto; z-index: 101; opacity: 0; transform: translateY(-100%); transition: opacity 0.3s, transform 0.3s; }
+        #progress-container.visible { opacity: 1; transform: translateY(0); }
+        #top-loader { width: 100%; height: 4px; background-color: #93c5fd; }
+        #top-loader-bar { width: 0%; height: 100%; background-color: #3b82f6; transition: width 0.3s ease; }
+        #progress-text { background-color: rgba(0, 0, 0, 0.6); color: white; font-size: 0.875rem; padding: 0.25rem 0.75rem; border-radius: 0 0 0.375rem 0; }
+
         /* --- View Transitions API --- */
         @keyframes fade-in { from { opacity: 0; } }
         @keyframes fade-out { to { opacity: 0; } }
@@ -79,6 +86,12 @@
     </style>
 </head>
 <body class="text-gray-800">
+
+<!-- 新增：带文本的顶部加载进度条 -->
+<div id="progress-container">
+    <div class="flex justify-end"><span id="progress-text"></span></div>
+    <div id="top-loader"><div id="top-loader-bar"></div></div>
+</div>
 
 <div class="container mx-auto px-4 py-8">
     
@@ -148,12 +161,10 @@
         manifest: null, searchIndex: null, categoryIndex: null, allPapers: new Map(),
         loadedMonths: new Set(), currentMonthIndex: -1, isFetching: false, isSearchMode: false,
         navObserver: null, currentQuery: '', favorites: new Set(), viewMode: 'detailed',
-        // 新增：分类筛选状态
         mainCategories: ['cs.CV', 'cs.LG', 'cs.CL', 'cs.AI', 'cs.RO', 'stat.ML'],
         currentSearchResults: [], 
         activeCategoryFilter: 'all',
-        // 新增：日期筛选状态
-        activeDateFilters: new Map() // Key: 'YYYY-MM', Value: 'DD' or 'all'
+        activeDateFilters: new Map()
     };
 
     // --- DOM 元素引用 ---
@@ -172,6 +183,9 @@
     const toastNotificationEl = document.getElementById('toast-notification');
     const categoryFilterContainer = document.getElementById('category-filter-container');
     const categoryFiltersEl = document.getElementById('category-filters');
+    const progressContainer = document.getElementById('progress-container');
+    const topLoaderBar = document.getElementById('top-loader-bar');
+    const progressText = document.getElementById('progress-text');
 
     // --- 工具函数 ---
     function escapeCQ(str) { return str ? String(str).replace(/'/g, "\\'") : ''; }
@@ -186,9 +200,25 @@
         try { await transition.finished; } 
         finally { delete mainContainer.dataset.vtName; }
     }
+    function updateProgress(text, percentage) {
+        progressText.textContent = text;
+        topLoaderBar.style.width = `${percentage}%`;
+    }
+    function showProgress(text) {
+        updateProgress(text, 0);
+        progressContainer.classList.add('visible');
+    }
+    function hideProgress() {
+        updateProgress('', 100);
+        setTimeout(() => {
+            progressContainer.classList.remove('visible');
+            updateProgress('', 0);
+        }, 300);
+    }
 
     // --- 核心功能 ---
     async function init() {
+        showProgress('正在初始化...');
         try {
             loadFavorites();
             loadViewMode();
@@ -218,6 +248,8 @@
         } catch (error) {
             console.error("Initialization failed:", error);
             papersContainer.innerHTML = `<p class="text-center text-red-500">加载数据失败。请确保您在项目的 'docs' 目录下启动了本地服务器。</p>`;
+        } finally {
+            hideProgress();
         }
     }
     
@@ -296,26 +328,23 @@
         document.documentElement.style.setProperty('--nav-height', `${navHeight}px`);
     }
 
-    function showSkeletonLoader(count = 5) {
-        hideSkeletonLoader();
-        let skeletonHTML = '';
-        for (let i = 0; i < count; i++) {
-            skeletonHTML += `<div class="skeleton-card"><div class="space-y-3"><div class="skeleton h-4 w-1/4 skeleton-animate"></div><div class="skeleton h-4 w-3/4 skeleton-animate"></div><div class="skeleton h-4 w-full skeleton-animate"></div><div class="skeleton h-4 w-1/2 skeleton-animate"></div></div></div>`;
-        }
-        skeletonContainer.innerHTML = skeletonHTML;
-        skeletonContainer.classList.remove('hidden');
-    }
-
-    function hideSkeletonLoader() {
-        skeletonContainer.classList.add('hidden');
-        skeletonContainer.innerHTML = '';
-    }
-
     // --- 核心逻辑：数据加载与渲染 ---
+    async function fetchWithProgress(monthsToLoad) {
+        const total = monthsToLoad.length;
+        if (total === 0) return;
+        
+        showProgress(`开始加载 ${total} 个文件...`);
+        let loadedCount = 0;
+        
+        for (const month of monthsToLoad) {
+            loadedCount++;
+            updateProgress(`正在加载: ${month} (${loadedCount}/${total})`, (loadedCount / total) * 90);
+            await fetchMonth(month);
+        }
+    }
+
     async function fetchMonth(month) {
         if (state.loadedMonths.has(month)) return;
-        if (state.isFetching) { await new Promise(res => setTimeout(res, 50)); return fetchMonth(month); }
-        state.isFetching = true;
         try {
             const response = await fetch(`./data/database-${month}.json`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -323,17 +352,13 @@
             papers.forEach(paper => { if (paper && paper.id && !state.allPapers.has(paper.id)) state.allPapers.set(paper.id, paper); });
             state.loadedMonths.add(month);
         } catch (error) { console.error(`Failed to load data for month ${month}:`, error); } 
-        finally { state.isFetching = false; }
     }
 
-    // 优化：renderPapers现在负责创建月份的整体容器
     function renderPapers(papersForMonth, month) {
-        // 创建月份的根容器
         const monthWrapper = document.createElement('div');
         monthWrapper.id = `month-content-${month}`;
         monthWrapper.dataset.monthAnchor = month;
 
-        // 创建月份标题和日期筛选栏
         const header = document.createElement('h2');
         header.className = 'month-header';
         header.textContent = `${month.substring(0,4)}年${month.substring(5,7)}月`;
@@ -349,14 +374,11 @@
         monthWrapper.append(header, dateFilterWrapper, papersListWrapper);
         papersContainer.appendChild(monthWrapper);
         
-        // 启动对月份锚点的观察
         state.navObserver.observe(monthWrapper);
         
-        // 更新该月份的视图（日期筛选+论文列表）
         updateMonthView(month, papersForMonth);
     }
     
-    // 新增：更新单个模块视图的函数（日期筛选器+论文列表）
     function updateMonthView(month, allPapersForMonth) {
         const dateFilterWrapper = document.getElementById(`date-filter-wrapper-${month}`);
         const papersListWrapper = document.getElementById(`papers-list-wrapper-${month}`);
@@ -364,15 +386,12 @@
 
         const activeDay = state.activeDateFilters.get(month) || 'all';
 
-        // 1. 渲染日期筛选器
         renderDateFilter(month, allPapersForMonth, dateFilterWrapper);
 
-        // 2. 根据日期筛选论文
         const filteredPapers = (activeDay === 'all')
             ? allPapersForMonth
-            : allPapersForMonth.filter(p => p.date && p.date.endsWith(`-${activeDay.padStart(2, '0')}`));
+            : allPapersForMonth.filter(p => p.date && p.date.endsWith(`-${String(activeDay).padStart(2, '0')}`));
 
-        // 3. 渲染论文列表
         papersListWrapper.innerHTML = '';
         if (filteredPapers.length > 0) {
             renderInChunks(filteredPapers, papersListWrapper);
@@ -381,18 +400,16 @@
         }
     }
 
-    // 新增：渲染日期筛选器的函数
     function renderDateFilter(month, papers, container) {
         const activeDay = state.activeDateFilters.get(month) || 'all';
         const daysWithPapers = [...new Set(papers.map(p => p.date.split('-')[2]))].sort((a, b) => b - a);
 
         let buttonsHTML = `<button class="date-filter-btn ${activeDay === 'all' ? 'active' : ''}" data-action="filter-by-date" data-month="${month}" data-day="all">全部日期</button>`;
         daysWithPapers.forEach(day => {
-            buttonsHTML += `<button class="date-filter-btn ${activeDay === day ? 'active' : ''}" data-action="filter-by-date" data-month="${month}" data-day="${day}">${day}日</button>`;
+            buttonsHTML += `<button class="date-filter-btn ${activeDay == day ? 'active' : ''}" data-action="filter-by-date" data-month="${month}" data-day="${day}">${day}日</button>`;
         });
         container.innerHTML = buttonsHTML;
     }
-
 
     function renderInChunks(papers, container, index = 0) {
         const CHUNK_SIZE = 10;
@@ -519,102 +536,159 @@
     }
 
     // --- 核心逻辑：状态切换与导航 ---
+    // 修复：重构月份导航逻辑
     async function navigateToMonth(month) {
-        resetToDefaultView();
-        const targetIndex = state.manifest.availableMonths.indexOf(month);
-        if (targetIndex === -1) return;
-        loader.classList.remove('hidden');
-        const monthsToLoad = [];
-        for(let i = 0; i <= targetIndex; i++) {
-            const m = state.manifest.availableMonths[i];
-            if (!state.loadedMonths.has(m)) monthsToLoad.push(m);
-        }
-        if (monthsToLoad.length > 0) await Promise.all(monthsToLoad.map(m => fetchMonth(m)));
-        
-        papersContainer.innerHTML = '';
-        state.navObserver.disconnect();
-        for(let i = 0; i <= targetIndex; i++) {
-            const m = state.manifest.availableMonths[i];
-            const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(m.replace('-', '').substring(2)));
-            renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), m);
-        }
-        state.currentMonthIndex = targetIndex;
-        loader.classList.add('hidden');
+        if (state.isFetching) return;
+        state.isFetching = true;
+        showProgress('准备导航...');
+        try {
+            if (state.isSearchMode) {
+                resetToDefaultView(false); // 仅重置UI，不重载数据
+            }
+            
+            const targetIndex = state.manifest.availableMonths.indexOf(month);
+            if (targetIndex === -1) {
+                console.error(`无效的月份: ${month}`);
+                return;
+            }
+            
+            // 仅加载目标月份的数据
+            await fetchWithProgress([month]);
+            
+            updateProgress('渲染论文...', 95);
+            papersContainer.innerHTML = ''; // 彻底清空容器
+            state.navObserver.disconnect();
+            state.activeDateFilters.clear(); // 重置日期筛选
+            
+            const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(month.replace('-', '').substring(2)));
+            renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), month);
+            
+            state.currentMonthIndex = targetIndex;
+            
+            window.scrollTo({ top: 0, behavior: 'auto' });
 
-        requestAnimationFrame(() => {
-             const anchor = document.getElementById(`month-content-${month}`);
-             if (anchor) anchor.scrollIntoView({ behavior: 'auto', block: 'start' });
-        });
+        } finally {
+            state.isFetching = false;
+            hideProgress();
+        }
     }
 
     async function loadNextMonth(triggeredByScroll = true) {
         if (state.isFetching || state.isSearchMode) return;
-        const nextIndex = state.currentMonthIndex + 1;
-        if (state.manifest && state.manifest.availableMonths && nextIndex < state.manifest.availableMonths.length) {
-            loader.classList.remove('hidden');
-            state.currentMonthIndex = nextIndex;
-            const nextMonth = state.manifest.availableMonths[nextIndex];
-            await fetchMonth(nextMonth);
-            const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(nextMonth.replace('-', '').substring(2)));
-            renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), nextMonth);
+        loader.classList.remove('hidden');
+        state.isFetching = true;
+        try {
+            const nextIndex = state.currentMonthIndex + 1;
+            if (state.manifest && state.manifest.availableMonths && nextIndex < state.manifest.availableMonths.length) {
+                const nextMonth = state.manifest.availableMonths[nextIndex];
+                await fetchMonth(nextMonth);
+                const papersInMonth = Array.from(state.allPapers.values()).filter(p => p.id.startsWith(nextMonth.replace('-', '').substring(2)));
+                renderPapers(papersInMonth.sort((a,b)=>b.date.localeCompare(a.date)), nextMonth);
+                state.currentMonthIndex = nextIndex;
+            } else {
+                if (endOfListMessage && triggeredByScroll) endOfListMessage.classList.remove('hidden');
+            }
+        } finally {
+            state.isFetching = false;
             loader.classList.add('hidden');
-        } else {
-            if (loader) loader.classList.add('hidden');
-            if (endOfListMessage && triggeredByScroll) endOfListMessage.classList.remove('hidden');
         }
     }
     
-    // 优化：重构搜索逻辑以支持二级筛选
     async function handleSearch() {
-        await applyViewTransition(async () => {
+        if (state.isFetching) return;
+        state.isFetching = true;
+        
+        try {
             const query = searchInput.value.trim();
-            state.currentQuery = query;
-            const url = new URL(window.location);
-            url.searchParams.delete('paper');
-            query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
-            history.pushState({}, '', url);
-
-            if (!query) { resetToDefaultView(); return; }
             
-            state.isSearchMode = true;
-            state.activeCategoryFilter = 'all';
-            papersContainer.classList.add('hidden');
-            searchResultsContainer.classList.remove('hidden');
-            quickNavContainer.style.display = 'none';
-            categoryFilterContainer.classList.remove('hidden');
-            searchInfoEl.classList.remove('hidden');
-            showSkeletonLoader();
-
-            let results = [];
-            if (query === 'favorites') {
-                const favoriteIds = Array.from(state.favorites);
-                if (favoriteIds.length > 0) {
-                    const requiredMonths = new Set(favoriteIds.map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
-                    await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
-                    results = favoriteIds.map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
-                }
-            } else {
-                try {
-                    if (!state.categoryIndex) state.categoryIndex = await (await fetch('./data/category_index.json')).json();
-                    if (!state.searchIndex) state.searchIndex = await (await fetch('./data/search_index.json')).json();
-                } catch(error) { hideSkeletonLoader(); searchResultsContainer.innerHTML = `<p class="text-center text-red-500">索引文件加载失败: ${error.message}。</p>`; return; }
-
-                let matchingIds;
-                if (state.categoryIndex[query]) { matchingIds = new Set(state.categoryIndex[query]); } 
-                else { matchingIds = new Set(); const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean); queryTokens.forEach((token, index) => { const foundIds = new Set(); for (const key in state.searchIndex) { if (key.includes(token)) state.searchIndex[key].forEach(id => foundIds.add(id)); } if (index === 0) matchingIds = foundIds; else matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id))); }); }
-
-                const requiredMonths = new Set([...matchingIds].map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
-                await Promise.all(Array.from(requiredMonths).map(month => fetchMonth(month)));
-                results = Array.from(matchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+            if (query !== state.currentQuery) {
+                showProgress(`正在搜索 "${query}"...`);
             }
             
-            hideSkeletonLoader();
-            state.currentSearchResults = results;
-            renderFilteredResults();
-        });
+            await applyViewTransition(async () => {
+                state.currentQuery = query;
+                const url = new URL(window.location);
+                url.searchParams.delete('paper');
+                query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
+                history.pushState({}, '', url);
+
+                if (!query) { resetToDefaultView(); return; }
+                
+                state.isSearchMode = true;
+                state.activeCategoryFilter = 'all';
+                papersContainer.classList.add('hidden');
+                searchResultsContainer.classList.remove('hidden');
+                quickNavContainer.style.display = 'none';
+                categoryFilterContainer.classList.remove('hidden');
+                searchInfoEl.classList.remove('hidden');
+                searchResultsContainer.innerHTML = '';
+
+                let results = [];
+                let requiredMonths = new Set();
+
+                if (query === 'favorites') {
+                    const favoriteIds = Array.from(state.favorites);
+                    if (favoriteIds.length > 0) {
+                        requiredMonths = new Set(favoriteIds.map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
+                    }
+                } else {
+                    try {
+                        if (!state.categoryIndex) {
+                            updateProgress('加载分类索引...', 10);
+                            state.categoryIndex = await (await fetch('./data/category_index.json')).json();
+                        }
+                        if (!state.searchIndex) {
+                            updateProgress('加载搜索索引...', 20);
+                            state.searchIndex = await (await fetch('./data/search_index.json')).json();
+                        }
+                    } catch(error) { searchResultsContainer.innerHTML = `<p class="text-center text-red-500">索引文件加载失败: ${error.message}。</p>`; return; }
+
+                    let matchingIds;
+                    if (state.categoryIndex[query]) { matchingIds = new Set(state.categoryIndex[query]); } 
+                    else { matchingIds = new Set(); const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean); queryTokens.forEach((token, index) => { const foundIds = new Set(); for (const key in state.searchIndex) { if (key.includes(token)) state.searchIndex[key].forEach(id => foundIds.add(id)); } if (index === 0) {matchingIds = foundIds;} else { matchingIds = new Set([...matchingIds].filter(id => foundIds.has(id)));} }); }
+                    
+                    requiredMonths = new Set([...matchingIds].map(id => `20${id.substring(0, 2)}-${id.substring(2, 4)}`));
+                }
+                
+                const monthsToLoad = [...requiredMonths].filter(m => !state.loadedMonths.has(m));
+                await fetchWithProgress(monthsToLoad);
+
+                updateProgress('整理结果...', 95);
+                
+                if (query === 'favorites') {
+                     results = Array.from(state.favorites).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+                } else {
+                    let finalMatchingIds;
+                    if (state.categoryIndex[query]) { finalMatchingIds = new Set(state.categoryIndex[query]); }
+                    else {
+                        finalMatchingIds = new Set();
+                        const queryTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+                        queryTokens.forEach((token, index) => {
+                            const foundIds = new Set();
+                            for (const key in state.searchIndex) {
+                                if (key.includes(token)) {
+                                    state.searchIndex[key].forEach(id => foundIds.add(id));
+                                }
+                            }
+                            if (index === 0) {
+                                finalMatchingIds = foundIds;
+                            } else {
+                                finalMatchingIds = new Set([...finalMatchingIds].filter(id => foundIds.has(id)));
+                            }
+                        });
+                    }
+                    results = Array.from(finalMatchingIds).map(id => state.allPapers.get(id)).filter(Boolean).sort((a,b) => b.date.localeCompare(a.date));
+                }
+                
+                state.currentSearchResults = results;
+                renderFilteredResults();
+            });
+        } finally {
+            state.isFetching = false;
+            hideProgress();
+        }
     }
     
-    // 新增：根据分类筛选来渲染结果
     function renderFilteredResults() {
         const { currentSearchResults, activeCategoryFilter, currentQuery } = state;
         
@@ -650,10 +724,11 @@
         });
     }
     
-    function resetToDefaultView() {
-        if (!state.isSearchMode && searchInput.value === '') return;
+    function resetToDefaultView(reload = true) {
         state.isSearchMode = false;
-        searchInput.value = ''; state.currentQuery = '';
+        searchInput.value = ''; 
+        state.currentQuery = '';
+        
         const url = new URL(window.location);
         url.searchParams.delete('q');
         url.searchParams.delete('paper');
@@ -666,7 +741,12 @@
         categoryFilterContainer.classList.add('hidden');
         state.currentSearchResults = [];
         state.activeCategoryFilter = 'all';
-        state.activeDateFilters.clear(); // 重置时清除日期筛选
+
+        if (reload) {
+            papersContainer.innerHTML = '';
+            state.currentMonthIndex = -1;
+            loadNextMonth(false);
+        }
         updateSearchStickiness();
     }
 
@@ -684,41 +764,51 @@
 
     // --- 新增和优化的事件处理 ---
     
-    // 修复：处理无效的论文ID直接链接
     async function handleDirectLink(paperId) {
-        if (!/^\d{4}\.\d{4,5}$/.test(paperId)) {
-            showToast(`无效的论文ID格式: ${paperId}`);
-            console.error(`无效的论文ID格式: ${paperId}`);
-            const url = new URL(window.location);
-            url.searchParams.delete('paper');
-            history.replaceState({}, '', url);
-            await loadNextMonth(false); // 加载默认内容
-            return;
+        if (state.isFetching) return;
+        state.isFetching = true;
+        showProgress('正在定位论文...');
+        try {
+            if (!/^\d{4}\.\d{4,5}$/.test(paperId)) {
+                showToast(`无效的论文ID格式: ${paperId}`);
+                console.error(`无效的论文ID格式: ${paperId}`);
+                const url = new URL(window.location);
+                url.searchParams.delete('paper');
+                history.replaceState({}, '', url);
+                await loadNextMonth(false);
+                return;
+            }
+
+            const month = `20${paperId.substring(0, 2)}-${paperId.substring(2, 4)}`;
+            await navigateToMonth(month);
+            
+            // 此时 navigateToMonth 已经执行完毕，我们可以安全地检查论文是否存在
+            if (!state.allPapers.has(paperId)) {
+                console.error(`论文 ID ${paperId} 在数据中未找到。`);
+                showToast(`找不到指定的论文 (ID: ${paperId})`);
+                const url = new URL(window.location);
+                url.searchParams.delete('paper');
+                history.replaceState({}, '', url);
+                // 导航到月份后发现没有论文，可以选择停留在该月份或者重置
+                // 此处选择停留在该月份
+                return;
+            }
+
+            const checkCardExists = (resolve) => {
+                const card = document.getElementById(`card-${paperId}`);
+                if (card) { resolve(card); } 
+                else { requestAnimationFrame(() => checkCardExists(resolve)); }
+            };
+
+            const card = await new Promise(checkCardExists);
+            
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.classList.add('highlight-shared-paper');
+            setTimeout(() => card.classList.remove('highlight-shared-paper'), 3000);
+        } finally {
+            state.isFetching = false;
+            hideProgress();
         }
-
-        const month = `20${paperId.substring(0, 2)}-${paperId.substring(2, 4)}`;
-        await navigateToMonth(month);
-
-        if (!state.allPapers.has(paperId)) {
-            console.error(`论文 ID ${paperId} 在数据中未找到。`);
-            showToast(`找不到指定的论文 (ID: ${paperId})`);
-            const url = new URL(window.location);
-            url.searchParams.delete('paper');
-            history.replaceState({}, '', url);
-            return;
-        }
-
-        const checkCardExists = (resolve) => {
-            const card = document.getElementById(`card-${paperId}`);
-            if (card) { resolve(card); } 
-            else { requestAnimationFrame(() => checkCardExists(resolve)); }
-        };
-
-        const card = await new Promise(checkCardExists);
-        
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        card.classList.add('highlight-shared-paper');
-        setTimeout(() => card.classList.remove('highlight-shared-paper'), 3000);
     }
     
     function showToast(message) {
@@ -742,10 +832,9 @@
     }
 
     function setupGlobalEventListeners() {
-        // 主内容区域的点击事件
         mainContainer.addEventListener('click', (event) => {
             const target = event.target.closest('[data-action]');
-            if (!target) return;
+            if (!target || state.isFetching) return;
             const { action, paperId, tagValue, month, day } = target.dataset;
 
             switch (action) {
@@ -753,7 +842,7 @@
                 case 'search-tag': performTagSearch(tagValue); break;
                 case 'toggle-favorite': toggleFavorite(event, paperId, target); break;
                 case 'share-paper': sharePaper(paperId); break;
-                case 'filter-by-date': // 新增：处理日期筛选
+                case 'filter-by-date':
                     state.activeDateFilters.set(month, day);
                     const papersForMonth = Array.from(state.allPapers.values())
                         .filter(p => p.id.startsWith(month.replace('-', '').substring(2)))
@@ -763,10 +852,9 @@
             }
         });
         
-        // 快速导航栏的点击事件
         quickNavContainer.addEventListener('click', (event) => {
              const target = event.target.closest('[data-action]');
-             if (!target) return;
+             if (!target || state.isFetching) return;
              const { action, month, mode, tagValue } = target.dataset;
 
              switch (action) {
@@ -778,7 +866,7 @@
         
         categoryFilterContainer.addEventListener('click', (event) => {
             const target = event.target.closest('[data-action="filter-category"]');
-            if (!target) return;
+            if (!target || state.isFetching) return;
             state.activeCategoryFilter = target.dataset.category;
             renderFilteredResults();
         });
@@ -786,7 +874,9 @@
         let searchTimeout;
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(handleSearch, 300);
+            searchTimeout = setTimeout(() => {
+                if (!state.isFetching) handleSearch();
+            }, 300);
         });
     }
 
