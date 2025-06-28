@@ -368,15 +368,19 @@
         const pdfUrl = paper.id ? `https://arxiv.org/pdf/${paper.id}` : '#';
         const isFavorited = state.favorites.has(paper.id);
         
-        // 优化：修改此函数以支持斜体和更小字号
+        // 修复：修正createInfoBox函数以正确应用所有样式
         const createInfoBox = (title, content, color) => {
             if (!content) return '';
             const isTldr = title === 'TL;DR';
             // 添加斜体类如果标题是 TL;DR
             const titleClass = isTldr ? 'italic' : '';
-            // 为TLDR内容添加斜体和更小字号的类
-            const contentClass = isTldr ? 'italic text-sm' : '';
-            return `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800 ${titleClass}">${title}:</p><p class="text-${color}-700 ${contentClass}">${content}</p></div>`;
+            // 组合基础颜色类和特殊样式类
+            let contentClasses = [`text-${color}-700`];
+            if (isTldr) {
+                contentClasses.push('italic', 'text-sm');
+            }
+            
+            return `<div class="info-box bg-${color}-50 border-${color}-400"><p class="info-box-title text-${color}-800 ${titleClass}">${title}:</p><p class="${contentClasses.join(' ')}">${content}</p></div>`;
         };
 
         card.innerHTML = `
@@ -394,8 +398,8 @@
                 </div>
             </div>
             <h2 class="text-xl md:text-2xl font-bold mb-2 text-gray-900">${title}</h2>
-            <!-- 优化：添加 italic class 并减小字号 -->
-            <h3 class="text-base md:text-lg font-semibold mb-3 text-blue-700 italic">${paper.zh_title||''}</h3>
+            <!-- 修复：统一使用更小的字号 -->
+            <h3 class="text-base font-semibold mb-3 text-blue-700 italic">${paper.zh_title||''}</h3>
             <div class="text-sm text-gray-600 mb-3 compact-hidden">
                 <p><strong>作者:</strong> ${paper.authors||'未知作者'}</p>
                 <p class="mt-2"><strong>Keyword:</strong> ${keywordsHTML}</p>
