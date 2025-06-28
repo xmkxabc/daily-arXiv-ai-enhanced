@@ -10,4 +10,6 @@ class ArxivItem(scrapy.Item):
     cate = scrapy.Field()
     # **新增**: 存储从arXiv API获取的作者备注
     comment = scrapy.Field()
+    date = scrapy.Field()
+    updated = scrapy.Field()
     AI = scrapy.Field()

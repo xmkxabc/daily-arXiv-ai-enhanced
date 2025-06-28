@@ -34,6 +34,8 @@ class ArxivPipeline:
                 # 使用PDF链接作为URL，更直接
                 # 转换为abs链接
                 item["url"] = result.pdf_url.replace('arxiv.org/pdf/', 'arxiv.org/abs/') 
+                item["date"] = result.published.date().isoformat() if result.published else None
+                item["updated"] = result.updated.date().isoformat() if result.updated else None
                 return item
             else:
                 raise DropItem(f"Paper with ID {item['id']} not found on arXiv.")
