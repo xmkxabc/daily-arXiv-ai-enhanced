@@ -603,6 +603,584 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         
+        /* ===== 用户引导和教程样式 ===== */
+        
+        /* 教程覆盖层 */
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .tutorial-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        /* 教程高亮区域 */
+        .tutorial-highlight {
+            position: absolute;
+            background-color: transparent;
+            border: 3px solid var(--accent-primary);
+            border-radius: 8px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+            z-index: 1001;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            animation: pulse-highlight 2s infinite;
+        }
+        
+        @keyframes pulse-highlight {
+            0%, 100% {
+                border-color: var(--accent-primary);
+                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px var(--accent-primary);
+            }
+            50% {
+                border-color: var(--accent-secondary);
+                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 30px var(--accent-secondary);
+            }
+        }
+        
+        /* 教程信息卡片 */
+        .tutorial-card {
+            position: fixed;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            z-index: 1002;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .tutorial-card.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        .tutorial-card h3 {
+            color: var(--accent-primary);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .tutorial-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .tutorial-card .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+        }
+        
+        .tutorial-card .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+        
+        .tutorial-card .feature-list .check-icon {
+            color: #22c55e;
+            font-weight: bold;
+        }
+        
+        /* 教程按钮 */
+        .tutorial-buttons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+        
+        .tutorial-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            font-size: 0.875rem;
+        }
+        
+        .tutorial-btn-primary {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+        
+        .tutorial-btn-primary:hover {
+            background-color: var(--accent-secondary);
+            transform: translateY(-1px);
+        }
+        
+        .tutorial-btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+        }
+        
+        .tutorial-btn-secondary:hover {
+            background-color: var(--bg-primary);
+        }
+        
+        .tutorial-btn-skip {
+            background-color: transparent;
+            color: var(--text-tertiary);
+            border: none;
+            text-decoration: underline;
+        }
+        
+        .tutorial-btn-skip:hover {
+            color: var(--text-secondary);
+        }
+        
+        /* 教程进度指示器 */
+        .tutorial-progress {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--bg-secondary);
+            padding: 1rem 2rem;
+            border-radius: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1003;
+            border: 1px solid var(--border-primary);
+            display: none;
+        }
+        
+        .tutorial-progress.active {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .tutorial-progress-bar {
+            width: 150px;
+            height: 6px;
+            background-color: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .tutorial-progress-fill {
+            height: 100%;
+            background-color: var(--accent-primary);
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+        
+        .tutorial-progress-text {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* 功能提示气泡 */
+        .feature-tooltip {
+            position: absolute;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            font-size: 0.875rem;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            border: 1px solid var(--border-primary);
+            max-width: 250px;
+            white-space: pre-wrap;
+        }
+        
+        .feature-tooltip.show {
+            opacity: 1;
+            transform: translateY(-5px);
+        }
+        
+        .feature-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--bg-secondary);
+        }
+        
+        .feature-tooltip.tooltip-bottom::after {
+            top: -12px;
+            border-top-color: transparent;
+            border-bottom-color: var(--bg-secondary);
+        }
+        
+        /* 热门关键词展示 */
+        .popular-keywords {
+            background-color: var(--bg-tertiary);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .popular-keywords h4 {
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .popular-keywords-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .popular-keyword {
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.375rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .popular-keyword:hover {
+            background-color: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+        
+        /* 功能介绍卡片 */
+        .welcome-card {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M20 20h60v60H20z' fill='none' stroke='rgba(255,255,255,0.1)' stroke-width='1'/%3E%3C/svg%3E") repeat;
+            animation: float 20s linear infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translateX(0) translateY(0); }
+            100% { transform: translateX(-50px) translateY(-50px); }
+        }
+        
+        .welcome-card h2 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .welcome-card p {
+            font-size: 1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .welcome-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .welcome-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            font-size: 0.875rem;
+        }
+        
+        .welcome-btn-primary {
+            background-color: white;
+            color: var(--accent-primary);
+        }
+        
+        .welcome-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .welcome-btn-secondary {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .welcome-btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* 快速功能访问面板 */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .quick-action-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .quick-action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-color: var(--accent-primary);
+        }
+        
+        .quick-action-icon {
+            width: 3rem;
+            height: 3rem;
+            margin: 0 auto 1rem;
+            background-color: var(--accent-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+        
+        .quick-action-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .quick-action-desc {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        /* 首次访问检测和状态 */
+        .first-visit-indicator {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #10b981;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            z-index: 200;
+            transition: top 0.5s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        .first-visit-indicator.show {
+            top: 2rem;
+        }
+        
+        /* 移动端教程优化 */
+        @media (max-width: 768px) {
+            .tutorial-card {
+                width: 95%;
+                padding: 1.5rem;
+                border-radius: 0.75rem;
+                max-width: none;
+                position: fixed !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+            }
+            
+            .tutorial-card h3 {
+                font-size: 1.125rem;
+            }
+            
+            .tutorial-buttons {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .tutorial-btn {
+                width: 100%;
+                justify-content: center;
+                display: flex;
+                min-height: 44px;
+            }
+            
+            .tutorial-progress {
+                top: 1rem;
+                width: 90%;
+                padding: 0.75rem 1rem;
+            }
+            
+            .tutorial-progress-bar {
+                width: 100px;
+            }
+            
+            .tutorial-highlight {
+                border-width: 2px;
+                animation: none; /* 在移动端禁用动画以提高性能 */
+            }
+            
+            .welcome-card {
+                padding: 1.5rem;
+                text-align: center;
+            }
+            
+            .welcome-card h2 {
+                font-size: 1.5rem;
+            }
+            
+            .welcome-actions {
+                justify-content: center;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .welcome-btn {
+                width: 100%;
+                min-height: 44px;
+                justify-content: center;
+                display: flex;
+                align-items: center;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            
+            .quick-action-card {
+                padding: 1rem;
+            }
+            
+            .quick-action-card:active {
+                transform: scale(0.98);
+            }
+            
+            .feature-tooltip {
+                max-width: 200px;
+                font-size: 0.75rem;
+                position: fixed !important;
+                top: auto !important;
+                bottom: 6rem !important;
+                left: 1rem !important;
+                right: 1rem !important;
+                transform: none !important;
+                text-align: center;
+            }
+            
+            .feature-tooltip::after {
+                display: none; /* 隐藏箭头 */
+            }
+            
+            .popular-keywords {
+                margin-bottom: 0.75rem;
+            }
+            
+            .popular-keyword {
+                min-height: 36px;
+                padding: 0.5rem 0.75rem;
+                font-size: 0.875rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+        
+        /* 无障碍和可访问性优化 */
+        .tutorial-overlay:focus-within {
+            outline: none;
+        }
+        
+        .tutorial-btn:focus,
+        .welcome-btn:focus,
+        .quick-action-card:focus {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 2px;
+        }
+        
+        /* 减少动画的用户偏好 */
+        @media (prefers-reduced-motion: reduce) {
+            .tutorial-highlight,
+            .tutorial-card,
+            .feature-tooltip,
+            .welcome-card::before {
+                animation: none;
+                transition: none;
+            }
+        }
+        
+        /* 深色模式下的教程样式优化 */
+        [data-theme="dark"] .tutorial-overlay {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        [data-theme="dark"] .tutorial-highlight {
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-secondary);
+        }
+        
+        [data-theme="dark"] .welcome-card {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+        }
+        
+        [data-theme="dark"] .first-visit-indicator {
+            background-color: #059669;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);
+        }
+        
         /* 修复：按钮样式 */
         .paper-card button {
             background-color: transparent;
@@ -1237,6 +1815,22 @@
             </button>
         </div>
         <p id="last-updated" class="text-sm text-gray-500 mt-2"></p>
+        
+        <!-- 帮助按钮 -->
+        <div class="flex justify-center items-center gap-4 mt-4">
+            <button id="help-btn" class="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition" title="查看使用帮助">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-sm font-medium">使用帮助</span>
+            </button>
+            <button id="tutorial-btn" class="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition" title="开始新手教程">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span class="text-sm font-medium">新手教程</span>
+            </button>
+        </div>
     </header>
 
     <!-- 优化：改进快速导航栏HTML结构以获得更好的响应式效果 -->
@@ -1292,6 +1886,60 @@
     </div>
 
     <div id="search-bar-container" class="search-bar-container">
+        <!-- 首次访问欢迎卡片 -->
+        <div id="welcome-card" class="welcome-card hidden">
+            <h2>欢迎使用 AI 论文每日速览！</h2>
+            <p>探索最新的人工智能研究论文，获取中文AI增强摘要，发现科研前沿动态。</p>
+            <div class="welcome-actions">
+                <button id="start-tutorial" class="welcome-btn welcome-btn-primary">开始新手教程</button>
+                <button id="explore-now" class="welcome-btn welcome-btn-secondary">直接探索</button>
+            </div>
+        </div>
+        
+        <!-- 快速功能访问面板 -->
+        <div id="quick-actions" class="quick-actions hidden">
+            <div class="quick-action-card" data-action="search">
+                <div class="quick-action-icon">🔍</div>
+                <div class="quick-action-title">智能搜索</div>
+                <div class="quick-action-desc">搜索论文标题、作者、关键词或AI摘要</div>
+            </div>
+            <div class="quick-action-card" data-action="categories">
+                <div class="quick-action-icon">📁</div>
+                <div class="quick-action-title">分类浏览</div>
+                <div class="quick-action-desc">按机器学习、计算机视觉等领域分类</div>
+            </div>
+            <div class="quick-action-card" data-action="favorites">
+                <div class="quick-action-icon">⭐</div>
+                <div class="quick-action-title">收藏管理</div>
+                <div class="quick-action-desc">收藏感兴趣的论文，随时回顾</div>
+            </div>
+            <div class="quick-action-card" data-action="timeline">
+                <div class="quick-action-icon">📅</div>
+                <div class="quick-action-title">时间线浏览</div>
+                <div class="quick-action-desc">按日期浏览历史论文数据</div>
+            </div>
+        </div>
+        
+        <!-- 热门关键词展示 -->
+        <div id="popular-keywords" class="popular-keywords hidden">
+            <h4>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                热门关键词
+            </h4>
+            <div class="popular-keywords-list">
+                <span class="popular-keyword" data-keyword="transformer">Transformer</span>
+                <span class="popular-keyword" data-keyword="diffusion">Diffusion</span>
+                <span class="popular-keyword" data-keyword="llm">LLM</span>
+                <span class="popular-keyword" data-keyword="computer vision">Computer Vision</span>
+                <span class="popular-keyword" data-keyword="reinforcement learning">Reinforcement Learning</span>
+                <span class="popular-keyword" data-keyword="neural network">Neural Network</span>
+                <span class="popular-keyword" data-keyword="deep learning">Deep Learning</span>
+                <span class="popular-keyword" data-keyword="generative ai">Generative AI</span>
+            </div>
+        </div>
+        
         <div class="relative">
             <!-- 搜索历史按钮 -->
             <div class="flex items-center gap-2 mb-2">
@@ -1348,6 +1996,52 @@
 
 <!-- 新增：分享操作的Toast通知 -->
 <div id="toast-notification" class="toast" role="alert"></div>
+
+<!-- 用户引导和教程系统 -->
+<div id="tutorial-overlay" class="tutorial-overlay">
+    <!-- 教程高亮区域 -->
+    <div id="tutorial-highlight" class="tutorial-highlight"></div>
+    
+    <!-- 教程进度指示器 -->
+    <div id="tutorial-progress" class="tutorial-progress">
+        <span id="tutorial-progress-text" class="tutorial-progress-text">步骤 1 / 6</span>
+        <div class="tutorial-progress-bar">
+            <div id="tutorial-progress-fill" class="tutorial-progress-fill"></div>
+        </div>
+    </div>
+    
+    <!-- 教程信息卡片 -->
+    <div id="tutorial-card" class="tutorial-card">
+        <h3 id="tutorial-title">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            欢迎使用
+        </h3>
+        <p id="tutorial-content">
+            欢迎来到 AI 论文每日速览！让我们通过简单的教程来了解主要功能。
+        </p>
+        <ul id="tutorial-features" class="feature-list">
+            <li><span class="check-icon">✓</span> 搜索和筛选最新 AI 论文</li>
+            <li><span class="check-icon">✓</span> 查看 AI 增强的中文摘要</li>
+            <li><span class="check-icon">✓</span> 收藏和管理感兴趣的论文</li>
+            <li><span class="check-icon">✓</span> 按分类和时间浏览论文</li>
+        </ul>
+        <div class="tutorial-buttons">
+            <button id="tutorial-skip" class="tutorial-btn tutorial-btn-skip">跳过教程</button>
+            <button id="tutorial-prev" class="tutorial-btn tutorial-btn-secondary">上一步</button>
+            <button id="tutorial-next" class="tutorial-btn tutorial-btn-primary">开始教程</button>
+        </div>
+    </div>
+</div>
+
+<!-- 功能提示气泡 -->
+<div id="feature-tooltip" class="feature-tooltip"></div>
+
+<!-- 首次访问指示器 -->
+<div id="first-visit-indicator" class="first-visit-indicator">
+    🎉 欢迎首次访问！点击右上角的"新手教程"开始了解功能
+</div>
 
 <!-- 新增：移动端底部导航栏 -->
 <div class="mobile-bottom-nav md:hidden">
@@ -1418,6 +2112,61 @@
             touchStartX: 0,
             touchEndX: 0,
             isSwipeGestureActive: false
+        },
+        // 用户引导状态
+        tutorial: {
+            isActive: false,
+            currentStep: 0,
+            totalSteps: 6,
+            isFirstVisit: false,
+            hasSeenWelcome: false,
+            steps: [
+                {
+                    target: 'header',
+                    title: '欢迎使用 AI 论文每日速览',
+                    content: '这里展示每日最新的 AI 研究论文，所有内容都配有 AI 增强的中文摘要，帮助您快速了解前沿研究。',
+                    position: 'bottom'
+                },
+                {
+                    target: '#searchInput',
+                    title: '智能搜索功能',
+                    content: '在这里输入关键词搜索论文。支持搜索论文标题、作者、摘要内容，还有智能搜索建议和历史记录。',
+                    position: 'bottom'
+                },
+                {
+                    target: '#quick-nav',
+                    title: '时间导航',
+                    content: '点击不同月份快速跳转到对应时间的论文。支持键盘导航和移动端手势操作。',
+                    position: 'bottom'
+                },
+                {
+                    target: '.paper-card:first-child',
+                    title: '论文卡片功能',
+                    content: '每张论文卡片包含原文摘要、AI 增强的中文摘要，以及收藏、分享等功能。点击"查看 AI 分析"展开详细解读。',
+                    position: 'top'
+                },
+                {
+                    target: '.view-toggle',
+                    title: '视图切换',
+                    content: '在详细视图和紧凑视图之间切换，根据您的阅读习惯选择最适合的展示方式。',
+                    position: 'bottom'
+                },
+                {
+                    target: '#theme-toggle',
+                    title: '个性化设置',
+                    content: '切换深色/浅色主题，支持系统主题跟随。所有设置都会自动保存。',
+                    position: 'bottom'
+                }
+            ]
+        },
+        // 用户偏好设置
+        userPreferences: {
+            hasSeenTutorial: false,
+            preferredTheme: 'system',
+            defaultView: 'detailed',
+            autoHideWelcome: false,
+            showTooltips: true,
+            enableKeyboardNav: true
         }
     };
 
@@ -1440,7 +2189,7 @@
     const progressContainer = document.getElementById('progress-container');
     const topLoaderBar = document.getElementById('top-loader-bar');
     const progressText = document.getElementById('progress-text');
-    // 新增元素引用
+    // DOM 元素引用
     const themeToggle = document.getElementById('theme-toggle');
     const themeIconLight = document.getElementById('theme-icon-light');
     const themeIconDark = document.getElementById('theme-icon-dark');
@@ -1458,6 +2207,29 @@
     const mobileBottomNav = document.querySelector('.mobile-bottom-nav');
     const swipeIndicatorLeft = document.getElementById('swipe-indicator-left');
     const swipeIndicatorRight = document.getElementById('swipe-indicator-right');
+    
+    // 用户引导元素引用
+    const tutorialBtn = document.getElementById('tutorial-btn');
+    const helpBtn = document.getElementById('help-btn');
+    const welcomeCard = document.getElementById('welcome-card');
+    const quickActions = document.getElementById('quick-actions');
+    const popularKeywords = document.getElementById('popular-keywords');
+    const tutorialOverlay = document.getElementById('tutorial-overlay');
+    const tutorialCard = document.getElementById('tutorial-card');
+    const tutorialHighlight = document.getElementById('tutorial-highlight');
+    const tutorialProgress = document.getElementById('tutorial-progress');
+    const tutorialTitle = document.getElementById('tutorial-title');
+    const tutorialContent = document.getElementById('tutorial-content');
+    const tutorialFeatures = document.getElementById('tutorial-features');
+    const tutorialPrevBtn = document.getElementById('tutorial-prev');
+    const tutorialNextBtn = document.getElementById('tutorial-next');
+    const tutorialSkipBtn = document.getElementById('tutorial-skip');
+    const tutorialProgressText = document.getElementById('tutorial-progress-text');
+    const tutorialProgressFill = document.getElementById('tutorial-progress-fill');
+    const featureTooltip = document.getElementById('feature-tooltip');
+    const firstVisitIndicator = document.getElementById('first-visit-indicator');
+    const startTutorialBtn = document.getElementById('start-tutorial');
+    const exploreNowBtn = document.getElementById('explore-now');
 
     // --- 性能监控和内存管理 ---
     const performance = {
@@ -2013,6 +2785,7 @@
             loadPaperRatings();
             initializeTheme();
             initializeSearchSuggestions();
+            initializeUserGuidance(); // 初始化用户引导系统
             
             const response = await fetch('./data/index.json');
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -3154,12 +3927,13 @@
         }
     }
     
-    function showToast(message) {
+    function showToast(message, type = 'success', duration = 3000) {
         toastNotificationEl.textContent = message;
+        toastNotificationEl.className = `toast ${type}`;
         toastNotificationEl.classList.add('show');
         setTimeout(() => {
             toastNotificationEl.classList.remove('show');
-        }, 3000);
+        }, duration);
     }
 
     async function sharePaper(paperId) {
@@ -3402,6 +4176,575 @@
             setTheme(e.matches ? 'dark' : 'light');
         }
     });
+    
+    // --- 用户引导和教程系统 ---
+    
+    // 检测首次访问
+    function detectFirstVisit() {
+        const hasVisited = localStorage.getItem('arxiv_has_visited');
+        if (!hasVisited) {
+            state.tutorial.isFirstVisit = true;
+            localStorage.setItem('arxiv_has_visited', 'true');
+            showFirstVisitWelcome();
+        }
+        
+        // 检查是否已看过教程
+        const hasSeenTutorial = localStorage.getItem('arxiv_tutorial_completed');
+        state.userPreferences.hasSeenTutorial = hasSeenTutorial === 'true';
+        
+        // 加载用户偏好
+        loadUserPreferences();
+    }
+    
+    // 显示首次访问欢迎信息
+    function showFirstVisitWelcome() {
+        // 显示欢迎指示器
+        setTimeout(() => {
+            firstVisitIndicator.classList.add('show');
+            setTimeout(() => {
+                firstVisitIndicator.classList.remove('show');
+            }, 5000);
+        }, 1000);
+        
+        // 显示欢迎卡片和快速功能面板
+        setTimeout(() => {
+            showWelcomeContent();
+        }, 500);
+    }
+    
+    // 显示欢迎内容
+    function showWelcomeContent() {
+        if (!state.userPreferences.hasSeenTutorial) {
+            welcomeCard.classList.remove('hidden');
+            quickActions.classList.remove('hidden');
+            popularKeywords.classList.remove('hidden');
+        }
+    }
+    
+    // 隐藏欢迎内容
+    function hideWelcomeContent() {
+        welcomeCard.classList.add('hidden');
+        quickActions.classList.add('hidden');
+        popularKeywords.classList.add('hidden');
+    }
+    
+    // 开始教程
+    function startTutorial() {
+        state.tutorial.isActive = true;
+        state.tutorial.currentStep = 0;
+        hideWelcomeContent();
+        showTutorialStep(0);
+        tutorialOverlay.classList.add('active');
+        tutorialProgress.classList.add('active');
+        
+        // 暂停其他交互
+        document.body.style.overflow = 'hidden';
+    }
+    
+    // 显示教程步骤
+    function showTutorialStep(stepIndex) {
+        const step = state.tutorial.steps[stepIndex];
+        if (!step) return;
+        
+        // 更新进度
+        updateTutorialProgress();
+        
+        // 更新内容
+        updateTutorialContent(step);
+        
+        // 高亮目标元素
+        highlightElement(step.target);
+        
+        // 定位教程卡片
+        positionTutorialCard(step);
+        
+        // 更新按钮状态
+        updateTutorialButtons();
+        
+        // 激活卡片
+        setTimeout(() => {
+            tutorialCard.classList.add('active');
+        }, 300);
+    }
+    
+    // 更新教程进度
+    function updateTutorialProgress() {
+        const progress = ((state.tutorial.currentStep + 1) / state.tutorial.totalSteps) * 100;
+        tutorialProgressText.textContent = `步骤 ${state.tutorial.currentStep + 1} / ${state.tutorial.totalSteps}`;
+        tutorialProgressFill.style.width = `${progress}%`;
+    }
+    
+    // 更新教程内容
+    function updateTutorialContent(step) {
+        tutorialTitle.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            ${step.title}
+        `;
+        tutorialContent.textContent = step.content;
+        
+        // 隐藏功能列表（只在第一步显示）
+        if (state.tutorial.currentStep === 0) {
+            tutorialFeatures.style.display = 'block';
+        } else {
+            tutorialFeatures.style.display = 'none';
+        }
+    }
+    
+    // 高亮目标元素
+    function highlightElement(selector) {
+        const element = document.querySelector(selector);
+        if (!element) return;
+        
+        const rect = element.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        
+        // 设置高亮位置
+        tutorialHighlight.style.top = `${rect.top + scrollTop - 10}px`;
+        tutorialHighlight.style.left = `${rect.left + scrollLeft - 10}px`;
+        tutorialHighlight.style.width = `${rect.width + 20}px`;
+        tutorialHighlight.style.height = `${rect.height + 20}px`;
+        
+        // 滚动到元素位置
+        element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'center'
+        });
+    }
+    
+    // 定位教程卡片
+    function positionTutorialCard(step) {
+        const element = document.querySelector(step.target);
+        if (!element) return;
+        
+        const rect = element.getBoundingClientRect();
+        const cardWidth = 400;
+        const cardHeight = 300;
+        const margin = 20;
+        
+        let top, left;
+        
+        if (step.position === 'bottom') {
+            top = rect.bottom + margin;
+            left = Math.max(margin, Math.min(window.innerWidth - cardWidth - margin, rect.left));
+        } else if (step.position === 'top') {
+            top = Math.max(margin, rect.top - cardHeight - margin);
+            left = Math.max(margin, Math.min(window.innerWidth - cardWidth - margin, rect.left));
+        } else {
+            // 默认居中
+            top = window.innerHeight / 2 - cardHeight / 2;
+            left = window.innerWidth / 2 - cardWidth / 2;
+        }
+        
+        // 确保卡片在视窗内
+        top = Math.max(margin, Math.min(window.innerHeight - cardHeight - margin, top));
+        left = Math.max(margin, Math.min(window.innerWidth - cardWidth - margin, left));
+        
+        tutorialCard.style.top = `${top}px`;
+        tutorialCard.style.left = `${left}px`;
+    }
+    
+    // 更新教程按钮
+    function updateTutorialButtons() {
+        // 上一步按钮
+        if (state.tutorial.currentStep === 0) {
+            tutorialPrevBtn.style.display = 'none';
+        } else {
+            tutorialPrevBtn.style.display = 'inline-block';
+        }
+        
+        // 下一步/完成按钮
+        if (state.tutorial.currentStep === state.tutorial.totalSteps - 1) {
+            tutorialNextBtn.textContent = '完成教程';
+        } else {
+            tutorialNextBtn.textContent = '下一步';
+        }
+    }
+    
+    // 下一步教程
+    function nextTutorialStep() {
+        tutorialCard.classList.remove('active');
+        
+        setTimeout(() => {
+            if (state.tutorial.currentStep < state.tutorial.totalSteps - 1) {
+                state.tutorial.currentStep++;
+                showTutorialStep(state.tutorial.currentStep);
+            } else {
+                completeTutorial();
+            }
+        }, 200);
+    }
+    
+    // 上一步教程
+    function prevTutorialStep() {
+        if (state.tutorial.currentStep > 0) {
+            tutorialCard.classList.remove('active');
+            
+            setTimeout(() => {
+                state.tutorial.currentStep--;
+                showTutorialStep(state.tutorial.currentStep);
+            }, 200);
+        }
+    }
+    
+    // 跳过教程
+    function skipTutorial() {
+        if (confirm('确定要跳过新手教程吗？您可以随时点击右上角的"新手教程"按钮重新开始。')) {
+            completeTutorial(false);
+        }
+    }
+    
+    // 完成教程
+    function completeTutorial(showCompleteMessage = true) {
+        state.tutorial.isActive = false;
+        tutorialOverlay.classList.remove('active');
+        tutorialProgress.classList.remove('active');
+        tutorialCard.classList.remove('active');
+        
+        // 恢复页面交互
+        document.body.style.overflow = '';
+        
+        // 保存完成状态
+        localStorage.setItem('arxiv_tutorial_completed', 'true');
+        state.userPreferences.hasSeenTutorial = true;
+        
+        if (showCompleteMessage) {
+            showToast('🎉 教程完成！现在您可以开始探索论文了', 'success');
+        }
+        
+        // 如果是首次访问，显示一些提示
+        if (state.tutorial.isFirstVisit) {
+            setTimeout(() => {
+                showFeatureTooltip('#searchInput', '💡 提示：试试输入"transformer"或"diffusion"开始搜索');
+            }, 2000);
+        }
+    }
+    
+    // 重置教程状态
+    function resetTutorial() {
+        localStorage.removeItem('arxiv_tutorial_completed');
+        state.userPreferences.hasSeenTutorial = false;
+        showToast('教程状态已重置，刷新页面后将重新显示引导');
+    }
+    
+    // --- 功能提示系统 ---
+    
+    // 显示功能提示
+    function showFeatureTooltip(targetSelector, message, duration = 3000, position = 'top') {
+        const target = document.querySelector(targetSelector);
+        if (!target || !state.userPreferences.showTooltips) return;
+        
+        const rect = target.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        
+        featureTooltip.textContent = message;
+        featureTooltip.className = `feature-tooltip ${position === 'bottom' ? 'tooltip-bottom' : ''}`;
+        
+        let top, left;
+        if (position === 'bottom') {
+            top = rect.bottom + scrollTop + 10;
+        } else {
+            top = rect.top + scrollTop - featureTooltip.offsetHeight - 10;
+        }
+        
+        left = rect.left + scrollLeft + (rect.width / 2) - (featureTooltip.offsetWidth / 2);
+        
+        // 确保在视窗内
+        left = Math.max(10, Math.min(window.innerWidth - featureTooltip.offsetWidth - 10, left));
+        
+        featureTooltip.style.top = `${top}px`;
+        featureTooltip.style.left = `${left}px`;
+        featureTooltip.classList.add('show');
+        
+        setTimeout(() => {
+            featureTooltip.classList.remove('show');
+        }, duration);
+    }
+    
+    // --- 用户偏好管理 ---
+    
+    // 加载用户偏好
+    function loadUserPreferences() {
+        const saved = localStorage.getItem('arxiv_user_preferences');
+        if (saved) {
+            try {
+                const preferences = JSON.parse(saved);
+                Object.assign(state.userPreferences, preferences);
+            } catch (e) {
+                console.warn('无法加载用户偏好设置:', e);
+            }
+        }
+    }
+    
+    // 保存用户偏好
+    function saveUserPreferences() {
+        localStorage.setItem('arxiv_user_preferences', JSON.stringify(state.userPreferences));
+    }
+    
+    // --- 智能推荐和个性化 ---
+    
+    // 基于用户行为的推荐
+    function generatePersonalizedRecommendations() {
+        // 分析用户搜索历史
+        const searchTerms = state.searchHistory.slice(-10);
+        const favoriteCategories = Array.from(state.favorites).map(id => {
+            const paper = state.allPapers.get(id);
+            return paper ? paper.primary_category : null;
+        }).filter(Boolean);
+        
+        // 生成推荐关键词
+        const recommendations = [];
+        
+        // 基于搜索历史
+        searchTerms.forEach(term => {
+            if (term.length > 3) {
+                recommendations.push({
+                    keyword: term,
+                    reason: '基于搜索历史',
+                    score: 0.8
+                });
+            }
+        });
+        
+        // 基于收藏的论文类别
+        favoriteCategories.forEach(category => {
+            const categoryKeywords = getCategoryKeywords(category);
+            categoryKeywords.forEach(keyword => {
+                recommendations.push({
+                    keyword,
+                    reason: '基于收藏偏好',
+                    score: 0.9
+                });
+            });
+        });
+        
+        return recommendations
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8)
+            .map(r => r.keyword);
+    }
+    
+    // 获取类别相关关键词
+    function getCategoryKeywords(category) {
+        const keywordMap = {
+            'cs.CV': ['computer vision', 'image', 'video', 'detection', 'segmentation'],
+            'cs.LG': ['machine learning', 'neural network', 'deep learning', 'optimization'],
+            'cs.CL': ['natural language', 'nlp', 'language model', 'text', 'translation'],
+            'cs.AI': ['artificial intelligence', 'reasoning', 'knowledge', 'planning'],
+            'cs.RO': ['robotics', 'robot', 'control', 'navigation', 'manipulation'],
+            'stat.ML': ['statistical learning', 'bayesian', 'inference', 'probability']
+        };
+        return keywordMap[category] || [];
+    }
+    
+    // 初始化用户引导系统
+    function initializeUserGuidance() {
+        // 检测首次访问
+        detectFirstVisit();
+        
+        // 绑定教程按钮事件
+        if (tutorialBtn) {
+            tutorialBtn.addEventListener('click', startTutorial);
+        }
+        
+        if (helpBtn) {
+            helpBtn.addEventListener('click', () => {
+                showHelpDialog();
+            });
+        }
+        
+        // 绑定欢迎卡片按钮
+        if (startTutorialBtn) {
+            startTutorialBtn.addEventListener('click', startTutorial);
+        }
+        
+        if (exploreNowBtn) {
+            exploreNowBtn.addEventListener('click', () => {
+                hideWelcomeContent();
+                showToast('开始探索吧！💫');
+            });
+        }
+        
+        // 绑定教程控制按钮
+        if (tutorialNextBtn) {
+            tutorialNextBtn.addEventListener('click', nextTutorialStep);
+        }
+        
+        if (tutorialPrevBtn) {
+            tutorialPrevBtn.addEventListener('click', prevTutorialStep);
+        }
+        
+        if (tutorialSkipBtn) {
+            tutorialSkipBtn.addEventListener('click', skipTutorial);
+        }
+        
+        // 绑定快速功能卡片
+        document.querySelectorAll('.quick-action-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const action = card.dataset.action;
+                handleQuickAction(action);
+            });
+        });
+        
+        // 绑定热门关键词
+        document.querySelectorAll('.popular-keyword').forEach(keyword => {
+            keyword.addEventListener('click', () => {
+                const term = keyword.dataset.keyword;
+                searchInput.value = term;
+                addToSearchHistory(term);
+                handleSearch();
+                hideWelcomeContent();
+            });
+        });
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (state.tutorial.isActive) {
+                if (e.key === 'Escape') {
+                    skipTutorial();
+                } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+                    nextTutorialStep();
+                } else if (e.key === 'ArrowLeft') {
+                    prevTutorialStep();
+                }
+            }
+        });
+        
+        // 监听窗口大小变化，调整教程卡片位置
+        window.addEventListener('resize', () => {
+            if (state.tutorial.isActive) {
+                const currentStep = state.tutorial.steps[state.tutorial.currentStep];
+                if (currentStep) {
+                    setTimeout(() => {
+                        positionTutorialCard(currentStep);
+                    }, 100);
+                }
+            }
+        });
+        
+        // 在移动端优化教程体验
+        if (state.mobile.isTouchDevice) {
+            // 禁用一些动画以提高性能
+            document.documentElement.style.setProperty('--tutorial-animation-duration', '0.2s');
+        }
+    }
+    
+    // 处理快速功能操作
+    function handleQuickAction(action) {
+        hideWelcomeContent();
+        
+        switch (action) {
+            case 'search':
+                searchInput.focus();
+                showFeatureTooltip('#searchInput', '开始搜索论文吧！支持中英文关键词');
+                break;
+            case 'categories':
+                if (categoryFiltersEl.children.length === 0) {
+                    buildCategoryFilters();
+                }
+                categoryFilterContainer.classList.remove('hidden');
+                categoryFilterContainer.scrollIntoView({ behavior: 'smooth' });
+                showFeatureTooltip('#category-filters', '选择感兴趣的领域进行筛选');
+                break;
+            case 'favorites':
+                showFavorites();
+                break;
+            case 'timeline':
+                document.getElementById('quick-nav').scrollIntoView({ behavior: 'smooth' });
+                showFeatureTooltip('#quick-nav', '点击月份快速跳转到对应时间');
+                break;
+        }
+    }
+    
+    // 显示帮助对话框
+    function showHelpDialog() {
+        const helpContent = `
+            <div class="space-y-4">
+                <h3 class="text-lg font-bold text-gray-900">使用帮助</h3>
+                
+                <div class="space-y-3">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">🔍 搜索功能</h4>
+                        <p class="text-sm text-gray-600">支持搜索论文标题、作者、摘要内容，支持中英文关键词</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800">📁 分类筛选</h4>
+                        <p class="text-sm text-gray-600">按计算机视觉、机器学习、自然语言处理等领域筛选</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800">⭐ 收藏管理</h4>
+                        <p class="text-sm text-gray-600">点击星星图标收藏论文，支持收藏夹管理和导出</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800">🤖 AI 增强摘要</h4>
+                        <p class="text-sm text-gray-600">每篇论文都有 AI 生成的中文摘要和核心观点解读</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800">🎨 个性化</h4>
+                        <p class="text-sm text-gray-600">支持深色/浅色主题切换，视图模式选择</p>
+                    </div>
+                </div>
+                
+                <div class="pt-3 border-t">
+                    <button onclick="startTutorial(); this.closest('.tutorial-card').remove();" 
+                            class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition">
+                        开始新手教程
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // 创建临时帮助卡片
+        const helpCard = document.createElement('div');
+        helpCard.className = 'tutorial-card active';
+        helpCard.style.position = 'fixed';
+        helpCard.style.top = '50%';
+        helpCard.style.left = '50%';
+        helpCard.style.transform = 'translate(-50%, -50%)';
+        helpCard.style.zIndex = '1003';
+        helpCard.innerHTML = helpContent;
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'tutorial-overlay active';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.appendChild(helpCard);
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+        
+        document.body.appendChild(overlay);
+    }
+    
+    // 开发者测试功能：重置首次访问状态
+    function resetFirstVisitState() {
+        localStorage.removeItem('arxiv_has_visited');
+        localStorage.removeItem('arxiv_tutorial_completed');
+        localStorage.removeItem('arxiv_user_preferences');
+        showToast('已重置首次访问状态，刷新页面查看效果', 'success', 4000);
+    }
+    
+    // 开发者工具：在控制台暴露一些有用的函数
+    if (typeof window !== 'undefined') {
+        window.arxivDevTools = {
+            resetFirstVisit: resetFirstVisitState,
+            startTutorial: startTutorial,
+            showTooltip: showFeatureTooltip,
+            resetTutorial: resetTutorial,
+            state: state
+        };
+        console.log('🛠️ 开发者工具已加载，使用 window.arxivDevTools 访问');
+    }
     
     document.addEventListener('DOMContentLoaded', init);
 </script>
