@@ -679,6 +679,533 @@
         [data-theme="dark"] .paper-link-pdf:hover {
             color: #fca5a5;
         }
+        
+        /* ===== 移动端优化样式 ===== */
+        
+        /* 基础响应式设置 */
+        @media (max-width: 768px) {
+            /* 容器和间距优化 */
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            /* 标题优化 */
+            header h1 {
+                font-size: 1.75rem;
+                line-height: 1.2;
+            }
+            
+            /* 快速导航栏移动端优化 */
+            .quick-nav {
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: stretch;
+            }
+            
+            .quick-nav .year-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .quick-nav .year-label {
+                text-align: center;
+                font-size: 0.875rem;
+                padding: 0.375rem 0.5rem;
+            }
+            
+            .quick-nav .month-btn {
+                min-height: 44px; /* 触摸目标最小尺寸 */
+                padding: 0.75rem;
+                font-size: 0.875rem;
+                text-align: center;
+                margin: 0.125rem;
+                border: 2px solid transparent;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            /* 触摸反馈涟漪效果 */
+            .month-btn::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                background: rgba(59, 130, 246, 0.3);
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                transition: width 0.3s, height 0.3s;
+                pointer-events: none;
+            }
+            
+            .month-btn:active::before {
+                width: 300px;
+                height: 300px;
+            }
+            
+            /* 工具栏移动端优化 */
+            .quick-nav .flex.items-center {
+                flex-direction: column;
+                gap: 0.5rem;
+                width: 100%;
+            }
+            
+            .view-toggle {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .view-toggle button {
+                flex: 1;
+                min-height: 44px;
+                padding: 0.75rem 1rem;
+            }
+            
+            #show-favorites-btn {
+                width: 100%;
+                min-height: 44px;
+                justify-content: center;
+                padding: 0.75rem 1rem;
+            }
+        }
+        
+        /* 移动端导航栏汉堡菜单 */
+        @media (max-width: 640px) {
+            .mobile-nav-toggle {
+                display: block;
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                padding: 0.5rem;
+                cursor: pointer;
+                color: var(--text-primary);
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            .mobile-nav-content {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background-color: var(--bg-secondary);
+                border: 1px solid var(--border-primary);
+                border-radius: 0.5rem;
+                margin-top: 0.5rem;
+                padding: 1rem;
+                box-shadow: 0 10px 25px var(--shadow-dark);
+                z-index: 50;
+            }
+            
+            .mobile-nav-content.active {
+                display: block;
+            }
+            
+            .quick-nav-container {
+                position: relative;
+            }
+            
+            /* 隐藏桌面端导航 */
+            .hidden.md\\:flex {
+                display: none !important;
+            }
+        }
+        
+        /* 桌面端隐藏移动端元素 */
+        @media (min-width: 769px) {
+            .mobile-nav-toggle {
+                display: none;
+            }
+            
+            .mobile-nav-content {
+                display: none !important;
+            }
+            
+            .md\\:hidden {
+                display: none !important;
+            }
+        }
+        
+        /* 搜索框移动端优化 */
+        @media (max-width: 768px) {
+            #searchInput {
+                font-size: 1rem; /* 防止iOS缩放 */
+                padding: 1rem;
+                min-height: 44px;
+            }
+            
+            .search-suggestions {
+                max-height: 200px;
+                border-radius: 0.5rem;
+            }
+            
+            .suggestion-item {
+                padding: 1rem;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+            
+            .search-history-panel {
+                border-radius: 0.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .search-history-item {
+                min-height: 36px;
+                padding: 0.5rem 0.75rem;
+                margin: 0.25rem;
+                display: inline-flex;
+                align-items: center;
+            }
+        }
+        
+        /* 论文卡片移动端优化 */
+        @media (max-width: 768px) {
+            .paper-card {
+                padding: 1rem;
+                margin-bottom: 1rem;
+                border-radius: 0.75rem;
+            }
+            
+            .paper-card h2 {
+                font-size: 1.125rem;
+                line-height: 1.4;
+                margin-bottom: 0.75rem;
+            }
+            
+            .paper-card h3 {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .paper-card .flex.justify-between {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.75rem;
+            }
+            
+            .paper-card .flex.items-center.space-x-2 {
+                justify-content: space-between;
+                margin-top: 0.5rem;
+            }
+            
+            .paper-card button,
+            .paper-card a {
+                min-height: 44px;
+                min-width: 44px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0.75rem;
+                border-radius: 0.5rem;
+                transition: all 0.2s ease;
+            }
+            
+            /* 分类和关键词标签优化 */
+            .keyword-tag {
+                font-size: 0.75rem;
+                padding: 0.5rem 0.75rem;
+                margin: 0.125rem;
+                min-height: 32px;
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            /* AI分析按钮优化 */
+            .ai-toggle-btn {
+                width: 100%;
+                min-height: 44px;
+                margin-top: 0.75rem;
+            }
+            
+            /* 论文链接优化 */
+            .paper-card .flex.items-center.space-x-4 {
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: stretch;
+            }
+            
+            .paper-card .flex.items-center.space-x-4 a {
+                text-align: center;
+                padding: 0.75rem 1rem;
+                border: 1px solid var(--border-primary);
+                border-radius: 0.5rem;
+                font-weight: 600;
+                transition: all 0.2s ease;
+            }
+            
+            .paper-link-abstract {
+                background-color: rgba(59, 130, 246, 0.1);
+            }
+            
+            .paper-link-pdf {
+                background-color: rgba(239, 68, 68, 0.1);
+            }
+        }
+        
+        /* 收藏按钮移动端优化 */
+        @media (max-width: 768px) {
+            .favorite-btn {
+                min-height: 44px;
+                min-width: 44px;
+                padding: 0.75rem;
+                border-radius: 0.5rem;
+                background-color: var(--bg-tertiary);
+                transition: all 0.2s ease;
+            }
+            
+            .favorite-btn:active {
+                transform: scale(0.95);
+                background-color: var(--accent-primary);
+                color: white;
+            }
+        }
+        
+        /* 分类筛选器移动端优化 */
+        @media (max-width: 768px) {
+            .category-filter-btn {
+                min-height: 44px;
+                padding: 0.75rem 1rem;
+                font-size: 0.875rem;
+                margin: 0.25rem;
+                flex-shrink: 0;
+            }
+            
+            #category-filters {
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+            }
+            
+            #category-filters::-webkit-scrollbar {
+                height: 4px;
+            }
+            
+            #category-filters::-webkit-scrollbar-track {
+                background: var(--bg-tertiary);
+                border-radius: 2px;
+            }
+            
+            #category-filters::-webkit-scrollbar-thumb {
+                background: var(--accent-primary);
+                border-radius: 2px;
+            }
+        }
+        
+        /* 日期筛选器移动端优化 */
+        @media (max-width: 768px) {
+            .date-filter-btn {
+                min-height: 40px;
+                padding: 0.5rem 0.75rem;
+                font-size: 0.875rem;
+                margin: 0.125rem;
+            }
+            
+            .flex.flex-wrap.items-center.gap-2 {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.5rem;
+            }
+        }
+        
+        /* 返回顶部按钮移动端优化 */
+        @media (max-width: 768px) {
+            .back-to-top-btn {
+                bottom: 1rem;
+                right: 1rem;
+                width: 3.5rem;
+                height: 3.5rem;
+                box-shadow: 0 8px 25px var(--shadow-dark);
+            }
+        }
+        
+        /* Toast通知移动端优化 */
+        @media (max-width: 768px) {
+            .toast {
+                left: 1rem;
+                right: 1rem;
+                transform: none;
+                border-radius: 0.75rem;
+                padding: 1rem;
+                font-size: 0.875rem;
+            }
+            
+            .toast.show {
+                top: 1rem;
+            }
+        }
+        
+        /* 底部导航栏（移动端专用） */
+        @media (max-width: 768px) {
+            .mobile-bottom-nav {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: var(--bg-secondary);
+                border-top: 1px solid var(--border-primary);
+                padding: 0.75rem 1rem;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                z-index: 40;
+                box-shadow: 0 -4px 10px var(--shadow-light);
+            }
+            
+            .mobile-bottom-nav button {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.25rem;
+                background: none;
+                border: none;
+                color: var(--text-secondary);
+                font-size: 0.75rem;
+                font-weight: 500;
+                padding: 0.5rem;
+                border-radius: 0.5rem;
+                transition: all 0.2s ease;
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            .mobile-bottom-nav button.active {
+                color: var(--accent-primary);
+                background-color: rgba(59, 130, 246, 0.1);
+            }
+            
+            .mobile-bottom-nav svg {
+                width: 1.25rem;
+                height: 1.25rem;
+            }
+            
+            .mobile-badge {
+                position: absolute;
+                top: -0.25rem;
+                right: -0.25rem;
+                background-color: #ef4444;
+                color: white;
+                font-size: 0.75rem;
+                border-radius: 50%;
+                height: 1.25rem;
+                width: 1.25rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+            }
+            
+            /* 为底部导航栏添加空间 */
+            body {
+                padding-bottom: 5rem;
+            }
+        }
+        
+        /* 手势操作支持 */
+        @media (max-width: 768px) {
+            .swipe-container {
+                touch-action: pan-x;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .swipe-indicator {
+                position: fixed;
+                top: 50%;
+                transform: translateY(-50%);
+                background-color: var(--accent-primary);
+                color: white;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                font-size: 0.875rem;
+                font-weight: 600;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                z-index: 60;
+                pointer-events: none;
+            }
+            
+            .swipe-indicator.left {
+                left: 1rem;
+            }
+            
+            .swipe-indicator.right {
+                right: 1rem;
+            }
+            
+            .swipe-indicator.show {
+                opacity: 0.9;
+            }
+        }
+        
+        /* 加载状态移动端优化 */
+        @media (max-width: 768px) {
+            #progress-container {
+                font-size: 0.875rem;
+            }
+            
+            #progress-text {
+                padding: 0.5rem 0.75rem;
+                border-radius: 0 0 0.5rem 0;
+            }
+            
+            .skeleton-card {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+        }
+        
+        /* 搜索信息移动端优化 */
+        @media (max-width: 768px) {
+            #search-info {
+                font-size: 1rem;
+                padding: 0.75rem;
+                background-color: var(--bg-tertiary);
+                border-radius: 0.5rem;
+                margin-bottom: 1rem;
+            }
+        }
+        
+        /* 月份标题移动端优化 */
+        @media (max-width: 768px) {
+            .month-header {
+                font-size: 1.5rem;
+                padding: 1.5rem 0 0.75rem 0;
+                text-align: center;
+            }
+        }
+        
+        /* 修复移动端特定问题 */
+        @media (max-width: 768px) {
+            /* 防止横向滚动 */
+            .container {
+                overflow-x: hidden;
+            }
+            
+            /* 优化文本选择 */
+            .paper-card {
+                -webkit-user-select: text;
+                user-select: text;
+            }
+            
+            /* 优化滚动性能 */
+            html {
+                scroll-behavior: smooth;
+            }
+            
+            /* 提升触摸反馈 */
+            button:active,
+            .keyword-tag:active,
+            .suggestion-item:active {
+                transform: scale(0.98);
+                opacity: 0.8;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-800" data-theme="light">
@@ -714,20 +1241,51 @@
 
     <!-- 优化：改进快速导航栏HTML结构以获得更好的响应式效果 -->
     <div id="quick-nav-container" class="sticky top-0 z-20 py-2 mb-8 quick-nav-container">
-        <nav id="quick-nav" class="quick-nav px-4 flex justify-between items-center flex-wrap gap-y-2">
-            <!-- 月份导航（左侧，可伸展） -->
-            <div id="month-nav-wrapper" class="flex-grow"></div>
-            <!-- 工具栏（右侧，固定宽度） -->
-            <div class="flex items-center gap-4 flex-shrink-0">
-                <div class="view-toggle">
-                    <button id="view-detailed-btn">详细</button>
-                    <button id="view-compact-btn">紧凑</button>
-                </div>
-                <div>
-                    <button id="show-favorites-btn" class="flex items-center space-x-2 px-3 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition shadow">
+        <nav id="quick-nav" class="quick-nav px-4">
+            <!-- 移动端汉堡菜单按钮 -->
+            <div class="flex justify-between items-center md:hidden mb-2">
+                <h2 class="text-lg font-semibold text-gray-800">月份导航</h2>
+                <button id="mobile-nav-toggle" class="mobile-nav-toggle" aria-label="展开/收起导航菜单">
+                    <span id="hamburger-icon">☰</span>
+                    <span id="close-icon" class="hidden">✕</span>
+                </button>
+            </div>
+            
+            <!-- 导航内容 -->
+            <div id="mobile-nav-content" class="mobile-nav-content">
+                <!-- 月份导航 -->
+                <div id="month-nav-wrapper" class="mb-4"></div>
+                
+                <!-- 工具栏 -->
+                <div class="flex flex-col gap-3 md:hidden">
+                    <div class="view-toggle">
+                        <button id="view-detailed-btn-mobile">详细视图</button>
+                        <button id="view-compact-btn-mobile">紧凑视图</button>
+                    </div>
+                    <button id="show-favorites-btn-mobile" class="flex items-center justify-center space-x-2 px-3 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition shadow min-h-[44px]">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                        <span>我的收藏</span><span id="favorites-count" class="ml-1 bg-white text-yellow-500 text-xs font-bold rounded-full px-1.5 py-0.5"></span>
+                        <span>我的收藏</span>
+                        <span id="favorites-count-mobile" class="ml-1 bg-white text-yellow-500 text-xs font-bold rounded-full px-1.5 py-0.5"></span>
                     </button>
+                </div>
+            </div>
+            
+            <!-- 桌面端导航 -->
+            <div class="hidden md:flex justify-between items-center flex-wrap gap-y-2">
+                <!-- 月份导航（左侧，可伸展） -->
+                <div id="month-nav-wrapper-desktop" class="flex-grow"></div>
+                <!-- 工具栏（右侧，固定宽度） -->
+                <div class="flex items-center gap-4 flex-shrink-0">
+                    <div class="view-toggle">
+                        <button id="view-detailed-btn">详细</button>
+                        <button id="view-compact-btn">紧凑</button>
+                    </div>
+                    <div>
+                        <button id="show-favorites-btn" class="flex items-center space-x-2 px-3 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition shadow">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            <span>我的收藏</span><span id="favorites-count" class="ml-1 bg-white text-yellow-500 text-xs font-bold rounded-full px-1.5 py-0.5"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </nav>
@@ -791,6 +1349,42 @@
 <!-- 新增：分享操作的Toast通知 -->
 <div id="toast-notification" class="toast" role="alert"></div>
 
+<!-- 新增：移动端底部导航栏 -->
+<div class="mobile-bottom-nav md:hidden">
+    <button id="mobile-nav-home" class="active" data-action="scroll-to-top">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        <span>首页</span>
+    </button>
+    
+    <button id="mobile-nav-search" data-action="focus-search">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <span>搜索</span>
+    </button>
+    
+    <button id="mobile-nav-favorites" data-action="show-favorites">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+        </svg>
+        <span>收藏</span>
+        <span id="mobile-favorites-badge" class="mobile-badge">0</span>
+    </button>
+    
+    <button id="mobile-nav-menu" data-action="toggle-mobile-menu">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+        <span>菜单</span>
+    </button>
+</div>
+
+<!-- 新增：手势操作提示 -->
+<div id="swipe-indicator-left" class="swipe-indicator left">← 上一月</div>
+<div id="swipe-indicator-right" class="swipe-indicator right">下一月 →</div>
+
 <script>
     // --- 全局状态管理 ---
     const state = {
@@ -815,6 +1409,15 @@
             enabled: true,
             currentFocusIndex: -1,
             focusableElements: []
+        },
+        // 移动端状态
+        mobile: {
+            isMenuOpen: false,
+            isTouchDevice: 'ontouchstart' in window,
+            swipeThreshold: 50,
+            touchStartX: 0,
+            touchEndX: 0,
+            isSwipeGestureActive: false
         }
     };
 
@@ -846,6 +1449,15 @@
     const searchSuggestions = document.getElementById('search-suggestions');
     const searchHistoryItems = document.getElementById('search-history-items');
     const readingProgressBar = document.getElementById('reading-progress-bar');
+    
+    // 移动端元素引用
+    const mobileNavToggle = document.getElementById('mobile-nav-toggle');
+    const mobileNavContent = document.getElementById('mobile-nav-content');
+    const hamburgerIcon = document.getElementById('hamburger-icon');
+    const closeIcon = document.getElementById('close-icon');
+    const mobileBottomNav = document.querySelector('.mobile-bottom-nav');
+    const swipeIndicatorLeft = document.getElementById('swipe-indicator-left');
+    const swipeIndicatorRight = document.getElementById('swipe-indicator-right');
 
     // --- 性能监控和内存管理 ---
     const performance = {
@@ -1106,6 +1718,288 @@
         readingProgressBar.style.width = `${Math.min(progress, 100)}%`;
     }
 
+    // --- 移动端优化功能 ---
+    
+    function initializeMobileFeatures() {
+        if (!state.mobile.isTouchDevice) return;
+        
+        setupMobileNavigation();
+        setupTouchGestures();
+        setupMobileBottomNav();
+        optimizeMobileSearch();
+        setupMobileViewportFix();
+    }
+    
+    function setupMobileNavigation() {
+        if (mobileNavToggle && mobileNavContent) {
+            mobileNavToggle.addEventListener('click', toggleMobileMenu);
+            
+            // 点击外部关闭菜单
+            document.addEventListener('click', (e) => {
+                if (state.mobile.isMenuOpen && 
+                    !quickNavContainer.contains(e.target)) {
+                    closeMobileMenu();
+                }
+            });
+        }
+    }
+    
+    function toggleMobileMenu() {
+        state.mobile.isMenuOpen = !state.mobile.isMenuOpen;
+        updateMobileMenuState();
+    }
+    
+    function closeMobileMenu() {
+        state.mobile.isMenuOpen = false;
+        updateMobileMenuState();
+    }
+    
+    function updateMobileMenuState() {
+        if (mobileNavContent && hamburgerIcon && closeIcon) {
+            if (state.mobile.isMenuOpen) {
+                mobileNavContent.classList.add('active');
+                hamburgerIcon.classList.add('hidden');
+                closeIcon.classList.remove('hidden');
+            } else {
+                mobileNavContent.classList.remove('active');
+                hamburgerIcon.classList.remove('hidden');
+                closeIcon.classList.add('hidden');
+            }
+        }
+    }
+    
+    function setupTouchGestures() {
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let touchStartY = 0;
+        let touchEndY = 0;
+        let isVerticalScroll = false;
+        
+        mainContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+            state.mobile.touchStartX = touchStartX;
+            state.mobile.touchStartY = touchStartY;
+            isVerticalScroll = false;
+        }, { passive: true });
+        
+        mainContainer.addEventListener('touchmove', (e) => {
+            const currentX = e.changedTouches[0].screenX;
+            const currentY = e.changedTouches[0].screenY;
+            
+            // 检查是否是垂直滚动
+            const deltaY = Math.abs(currentY - touchStartY);
+            const deltaX = Math.abs(currentX - touchStartX);
+            
+            if (deltaY > deltaX && deltaY > 10) {
+                isVerticalScroll = true;
+            }
+            
+            // 显示滑动提示
+            if (!isVerticalScroll && deltaX > 20) {
+                const direction = currentX > touchStartX ? 'right' : 'left';
+                showSwipeIndicator(direction);
+            }
+        }, { passive: true });
+        
+        mainContainer.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            state.mobile.touchEndX = touchEndX;
+            state.mobile.touchEndY = touchEndY;
+            
+            hideSwipeIndicators();
+            
+            if (!isVerticalScroll) {
+                handleSwipeGesture();
+            }
+        }, { passive: true });
+    }
+    
+    function handleSwipeGesture() {
+        const deltaX = state.mobile.touchEndX - state.mobile.touchStartX;
+        const deltaY = Math.abs(state.mobile.touchEndY - state.mobile.touchStartY);
+        
+        // 只有水平滑动距离足够且垂直滑动距离不大时才处理
+        if (Math.abs(deltaX) > state.mobile.swipeThreshold && deltaY < 100) {
+            if (deltaX > 0) {
+                // 向右滑动 - 加载上一月
+                handleSwipeRight();
+            } else {
+                // 向左滑动 - 加载下一月
+                handleSwipeLeft();
+            }
+        }
+    }
+    
+    function handleSwipeLeft() {
+        // 加载下一月
+        if (!state.isFetching && !state.isSearchMode) {
+            loadNextMonth(false);
+            showToast('滑动加载下一月');
+        }
+    }
+    
+    function handleSwipeRight() {
+        // 加载上一月
+        if (!state.isFetching && !state.isSearchMode && state.currentMonthIndex > 0) {
+            const prevMonth = state.manifest.availableMonths[state.currentMonthIndex - 1];
+            if (prevMonth) {
+                navigateToMonth(prevMonth);
+                showToast('滑动加载上一月');
+            }
+        }
+    }
+    
+    function showSwipeIndicator(direction) {
+        const indicator = direction === 'left' ? swipeIndicatorLeft : swipeIndicatorRight;
+        if (indicator) {
+            indicator.classList.add('show');
+        }
+    }
+    
+    function hideSwipeIndicators() {
+        if (swipeIndicatorLeft) swipeIndicatorLeft.classList.remove('show');
+        if (swipeIndicatorRight) swipeIndicatorRight.classList.remove('show');
+    }
+    
+    function setupMobileBottomNav() {
+        if (!mobileBottomNav) return;
+        
+        const buttons = mobileBottomNav.querySelectorAll('button');
+        buttons.forEach(button => {
+            button.addEventListener('click', handleMobileBottomNavClick);
+        });
+        
+        // 更新收藏计数
+        updateMobileFavoritesCount();
+    }
+    
+    function handleMobileBottomNavClick(e) {
+        const action = e.currentTarget.dataset.action;
+        
+        // 更新活跃状态
+        mobileBottomNav.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        
+        switch (action) {
+            case 'scroll-to-top':
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                break;
+            case 'focus-search':
+                searchInput.focus();
+                searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                break;
+            case 'show-favorites':
+                performTagSearch('favorites');
+                break;
+            case 'toggle-mobile-menu':
+                toggleMobileMenu();
+                break;
+        }
+    }
+    
+    function updateMobileFavoritesCount() {
+        const badge = document.getElementById('mobile-favorites-badge');
+        const mobileCount = document.getElementById('favorites-count-mobile');
+        if (badge) badge.textContent = state.favorites.size;
+        if (mobileCount) mobileCount.textContent = state.favorites.size;
+    }
+    
+    function optimizeMobileSearch() {
+        // 移动端搜索框优化
+        searchInput.addEventListener('focus', () => {
+            // 滚动到搜索框
+            setTimeout(() => {
+                searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        });
+        
+        // 优化搜索建议在移动端的显示
+        const suggestions = document.getElementById('search-suggestions');
+        if (suggestions) {
+            suggestions.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // 防止双击缩放
+            });
+        }
+    }
+    
+    function setupMobileViewportFix() {
+        // 修复移动端 100vh 问题
+        function setVH() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(setVH, 500);
+        });
+    }
+    
+    function optimizeMobileTouchTargets() {
+        // 确保所有可点击元素达到最小触摸目标尺寸
+        const clickableElements = document.querySelectorAll('button, a, .keyword-tag, .suggestion-item');
+        clickableElements.forEach(element => {
+            if (window.innerWidth <= 768) {
+                const rect = element.getBoundingClientRect();
+                if (rect.height < 44) {
+                    element.style.minHeight = '44px';
+                    element.style.display = 'inline-flex';
+                    element.style.alignItems = 'center';
+                    element.style.justifyContent = 'center';
+                }
+            }
+        });
+    }
+    
+    function addRippleEffect(element) {
+        element.addEventListener('touchstart', function(e) {
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.touches[0].clientX - rect.left - size / 2;
+            const y = e.touches[0].clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+        
+        // 添加 CSS 动画
+        if (!document.getElementById('ripple-animation')) {
+            const style = document.createElement('style');
+            style.id = 'ripple-animation';
+            style.textContent = `
+                @keyframes ripple {
+                    to {
+                        transform: scale(4);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
     // --- 核心功能 ---
     async function init() {
         showProgress('正在初始化...');
@@ -1159,8 +2053,10 @@
         setupBackToTopButton();
         setupIntersectionObserver();
         updateSearchHistoryDisplay();
+        initializeMobileFeatures(); // 新增移动端功能初始化
         if(state.manifest.lastUpdated) lastUpdatedEl.textContent = `数据更新于: ${state.manifest.lastUpdated}`;
         document.getElementById('favorites-count').textContent = state.favorites.size;
+        updateMobileFavoritesCount(); // 更新移动端收藏计数
     }
     
     // --- 论文标签、笔记、评分功能 ---
@@ -1353,15 +2249,65 @@
             });
             navHTML += `</div>`;
         });
-        document.getElementById('month-nav-wrapper').innerHTML = navHTML;
         
-        document.getElementById('view-detailed-btn').dataset.action = 'toggle-view';
-        document.getElementById('view-detailed-btn').dataset.mode = 'detailed';
-        document.getElementById('view-compact-btn').dataset.action = 'toggle-view';
-        document.getElementById('view-compact-btn').dataset.mode = 'compact';
-        document.getElementById('show-favorites-btn').dataset.action = 'search-tag';
-        document.getElementById('show-favorites-btn').dataset.tagValue = 'favorites';
+        // 填充移动端和桌面端导航
+        const mobileNavWrapper = document.getElementById('month-nav-wrapper');
+        const desktopNavWrapper = document.getElementById('month-nav-wrapper-desktop');
+        
+        if (mobileNavWrapper) mobileNavWrapper.innerHTML = navHTML;
+        if (desktopNavWrapper) desktopNavWrapper.innerHTML = navHTML;
+        
+        // 设置按钮事件
+        setupViewToggleButtons();
+        setupFavoritesButtons();
         updateViewModeUI();
+        
+        // 为移动端按钮添加涟漪效果
+        if (state.mobile.isTouchDevice) {
+            document.querySelectorAll('.month-btn').forEach(addRippleEffect);
+        }
+    }
+    
+    function setupViewToggleButtons() {
+        // 桌面端按钮
+        const detailedBtn = document.getElementById('view-detailed-btn');
+        const compactBtn = document.getElementById('view-compact-btn');
+        if (detailedBtn) {
+            detailedBtn.dataset.action = 'toggle-view';
+            detailedBtn.dataset.mode = 'detailed';
+        }
+        if (compactBtn) {
+            compactBtn.dataset.action = 'toggle-view';
+            compactBtn.dataset.mode = 'compact';
+        }
+        
+        // 移动端按钮
+        const detailedBtnMobile = document.getElementById('view-detailed-btn-mobile');
+        const compactBtnMobile = document.getElementById('view-compact-btn-mobile');
+        if (detailedBtnMobile) {
+            detailedBtnMobile.dataset.action = 'toggle-view';
+            detailedBtnMobile.dataset.mode = 'detailed';
+        }
+        if (compactBtnMobile) {
+            compactBtnMobile.dataset.action = 'toggle-view';
+            compactBtnMobile.dataset.mode = 'compact';
+        }
+    }
+    
+    function setupFavoritesButtons() {
+        // 桌面端收藏按钮
+        const favBtn = document.getElementById('show-favorites-btn');
+        if (favBtn) {
+            favBtn.dataset.action = 'search-tag';
+            favBtn.dataset.tagValue = 'favorites';
+        }
+        
+        // 移动端收藏按钮
+        const favBtnMobile = document.getElementById('show-favorites-btn-mobile');
+        if (favBtnMobile) {
+            favBtnMobile.dataset.action = 'search-tag';
+            favBtnMobile.dataset.tagValue = 'favorites';
+        }
     }
     
     function setupCategoryFilters() {
@@ -1390,6 +2336,9 @@
         window.addEventListener('scroll', () => {
             if (window.scrollY > 300) { backToTopBtn.classList.add('visible'); } 
             else { backToTopBtn.classList.remove('visible'); }
+            
+            // 更新阅读进度
+            updateReadingProgress();
         });
         backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
     }
@@ -1856,6 +2805,7 @@
             }
             saveFavorites();
             document.getElementById('favorites-count').textContent = state.favorites.size;
+            updateMobileFavoritesCount(); // 更新移动端计数
         }
         if (state.currentQuery === 'favorites' && state.favorites.has(paperId)) {
             applyViewTransition(update, 'fav-remove');
@@ -2370,6 +3320,42 @@
         
         // 键盘访问性支持
         document.addEventListener('keydown', handleGlobalKeyNavigation);
+        
+        // 移动端底部导航事件
+        if (mobileBottomNav) {
+            mobileBottomNav.addEventListener('click', (event) => {
+                const target = event.target.closest('[data-action]');
+                if (target) {
+                    handleMobileBottomNavClick(event);
+                }
+            });
+        }
+        
+        // 移动端触摸优化
+        if (state.mobile.isTouchDevice) {
+            // 为所有可点击元素添加触摸反馈
+            setTimeout(() => {
+                const clickableElements = document.querySelectorAll('button:not(.no-ripple), .keyword-tag, .month-btn');
+                clickableElements.forEach(addRippleEffect);
+                optimizeMobileTouchTargets();
+            }, 1000);
+            
+            // 防止双击缩放（但保留捏合缩放）
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', (e) => {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+        }
     }
     
     function updateSuggestionHighlight() {
